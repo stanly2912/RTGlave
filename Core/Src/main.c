@@ -50,7 +50,7 @@ UART_HandleTypeDef huart2;
 struct rt_thread thread_pool[2];
 rt_thread_t th_input, th_main;
 
-static uint8_t stack0[4096];
+static uint8_t stack0[512];
 static uint8_t stack1[8192];
 
 volatile uint32_t channel;
@@ -79,7 +79,7 @@ void rtos_startup() {
   
   th_input = &thread_pool[0];
   th_main = &thread_pool[1];
-  rt_thread_init(th_input, "input", input_monitor, (void *)&channel, stack0, sizeof stack0, 11, 20);
+  rt_thread_init(th_input, "input", input_monitor, (void *)&channel, stack0, sizeof stack0, 11, 5);
   rt_thread_init(th_main, "glvmain", glave_main, (void *)&channel, stack1, sizeof stack1, 10, 20);
   rt_thread_startup(th_input);
   rt_thread_startup(th_main);

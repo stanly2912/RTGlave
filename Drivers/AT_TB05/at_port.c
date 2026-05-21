@@ -1,9 +1,6 @@
 #include "at.h"
 
-#include "stm32f407xx.h"
-#include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal_uart.h"
-#include "usart.h"
+#include "main.h"
 
 #include <stdint.h>
 
