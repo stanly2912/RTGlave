@@ -1,13 +1,14 @@
 #include "at.h"
-
-#include "main.h"
-
+#include <stdbool.h>
 #include <stdint.h>
-
+#include "main.h"
 #include "rtthread.h"
 #include "rtdef.h"
+#include "stm32f1xx_hal_uart.h"
 
-extern int at_memcmp(const uint8_t *buf1, const uint8_t *buf2, int size);
+extern UART_HandleTypeDef huart2;
+extern volatile uint32_t tb05_rp, tb05_wp;
+extern volatile bool tb05_full;
 
 static int offset, finish;
 static uint8_t *current_line;
@@ -17,12 +18,10 @@ static int connected = 0;
 void at_connected_set(int state) {
     connected = state;
     if (state) {
-        offset = 0;
-        finish = 0;
-        current_line = at_receive_buf;
-        for (int i = 0; i < AT_LINE_SIZE * AT_LINE_NUM_MAX; i++) {
-            current_line[i] = 0;
-        }
+        tb05_rp = 0;
+        tb05_wp = 0;
+        tb05_full = false;
+        HAL_UART_Receive_IT(&huart2, at_receive_buf + tb05_wp, 1);
     }
 }
 int at_connected_get(void) {
@@ -39,10 +38,7 @@ int at_send(int dev_id, const uint8_t *data, uint32_t size) {
 
     switch (dev_id) {
         case 0: 
-            huart = &huart4;
-            break;
-        case 1: 
-            huart = &huart5;
+            huart = &huart2;
             break;
         default:
             return AT_ERR;
@@ -65,11 +61,7 @@ int at_receive_line(int dev_id, uint8_t *line) {
 
     switch (dev_id) {
         case 0: 
-            huart = &huart4;
-            break;
-        case 1: 
-            huart = &huart5;
-            break;
+            huart = &huart2;
         default:
             return AT_ERR;
     }
@@ -94,13 +86,15 @@ int at_receive_line(int dev_id, uint8_t *line) {
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    static int prev_rp;
     if (at_connected_get()) {
-        offset += 1;
-        if (offset < AT_LINE_SIZE * AT_LINE_NUM_MAX) {
-            HAL_UART_Receive_IT(huart, current_line + offset, 1);
-        }
+        tb05_wp = (tb05_wp + 1) % (AT_LINE_SIZE * AT_LINE_NUM_MAX)
+        if (tb05_wp != (tb05_rp - 1) % (AT_LINE_SIZE * AT_LINE_NUM_MAX))
+            HAL_UART_Receive_IT(&huart2, at_receive_buf + tb05_wp, 1);
+        else
+            tb05_full = true;
     }
-    else if (huart->Instance == UART4 || huart->Instance == UART5) {
+    else if (huart->Instance == USART2) {
         if (current_line[offset] == '\n') {
             finish = 1;
         }

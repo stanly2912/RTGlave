@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-typedef enum AT_State { AT_IDLE, AT_SEND, AT_RECEIVE } AT_State;
 typedef enum AT_Return { AT_OK, AT_ERR, AT_TIMEOUT} AT_Return;
 
 #define AT_TIMEOUT_TIME 450

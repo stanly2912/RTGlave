@@ -1,7 +1,10 @@
 #ifndef AT_BLE_H
+#define AT_BLE_H
 
 #include "../at.h"
 #include <stdbool.h>
+
+typedef enum AT_BLE_Mode {BLE_SLAVE = 0, BLE_MASTER = 1, BLE_IBEACON = 2, BLE_OFF = 9} AT_BLE_Mode;
 
 void at_connected_set(int state);
 int at_connected_get(void);
@@ -10,8 +13,6 @@ int at_blename_set(int dev_id, const char *name, bool save_flash);
 
 /* Incompleted */
 int at_blename_get(int dev_id, char *name_buf);
-
-typedef enum AT_BLE_Mode {BLE_SLAVE = 0, BLE_MASTER = 1, BLE_IBEACON = 2, BLE_OFF = 9} AT_BLE_Mode;
 
 int at_blemode_set(int dev_id, int mode);
 

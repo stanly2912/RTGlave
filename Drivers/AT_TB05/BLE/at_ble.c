@@ -1,6 +1,4 @@
 #include "at_ble.h"
-#include "at.h"
-#include "rtthread.h"
 #include <stdint.h>
 #include <sys/syslimits.h>
 
@@ -90,22 +88,6 @@ int at_blescan(int dev_id, const char *target_name, char mac[12]) {
             line = at_receive_buf;
         }
     }
-    rt_kprintf("%d/%d:\n", debug_count, AT_LINE_NUM_MAX);
-    for (int i = 0; i < AT_LINE_NUM_MAX; i++) {
-        line = at_receive_buf + i * AT_LINE_SIZE;
-        for (int j = 0;  j < AT_LINE_SIZE; j++) {
-            if (j == AT_LINE_SIZE-1) {
-                line [j] = '\0';
-                break;
-            }
-            if (line[j] == '\r') {
-                line[j] = 0;
-                break;
-            }
-        }
-        rt_kprintf("%s\n", line);
-    }
-
     ret = stage != 0 ? ret : AT_ERR;
 
     Ret:
@@ -116,6 +98,12 @@ int at_blescan(int dev_id, const char *target_name, char mac[12]) {
 
 int at_bleconnect(int dev_id, const char mac[12]) {
     at_sendseq(dev_id, "AT+BLECONNECT=", mac, "\r\n");
+    return at_receive(dev_id);
+}
+
+int at_exit_tranfer(int dev_id) {
+    const uint8_t cmd [] = "+++";
+    at_send(dev_id, (const uint8_t *)cmd, at_strlen((const char *)cmd));
     return at_receive(dev_id);
 }
 

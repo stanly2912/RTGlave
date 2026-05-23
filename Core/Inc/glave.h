@@ -1,6 +1,7 @@
 #ifndef GLAVE_H
 #define GLAVE_H
 
+#include "tb05.h"
 #include "rtthread.h"
 #include <stdint.h>
 
