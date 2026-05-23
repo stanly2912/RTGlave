@@ -1,8 +1,10 @@
 #include "tb05.h"
-#include "BLE/at_ble.h"
 #include "at.h"
-#include "stm32f1xx_hal_uart.h"
+#include "BLE/at_ble.h"
+
 #include <stdbool.h>
+
+#include "main.h"
 
 volatile uint32_t tb05_rp, tb05_wp;
 volatile bool tb05_full;
@@ -48,7 +50,13 @@ int tb05_read(int dev_id, uint8_t *data, int size) {
 }
 
 int tb05_write(int dev_id, const uint8_t *data, int size) {
-    at_send(dev_id, data, size);
+    int ret = at_send(dev_id, data, size);
+    if (ret == AT_OK) {
+        return size;
+    }
+    else {
+        return -1;
+    }
 }
 
 int tb05_connect(int dev_id, const char *name) {

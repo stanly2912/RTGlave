@@ -1,10 +1,12 @@
 #include "at.h"
+
 #include <stdbool.h>
 #include <stdint.h>
+
 #include "main.h"
+
 #include "rtthread.h"
 #include "rtdef.h"
-#include "stm32f1xx_hal_uart.h"
 
 extern UART_HandleTypeDef huart2;
 extern volatile uint32_t tb05_rp, tb05_wp;
@@ -86,9 +88,8 @@ int at_receive_line(int dev_id, uint8_t *line) {
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-    static int prev_rp;
     if (at_connected_get()) {
-        tb05_wp = (tb05_wp + 1) % (AT_LINE_SIZE * AT_LINE_NUM_MAX)
+        tb05_wp = (tb05_wp + 1) % (AT_LINE_SIZE * AT_LINE_NUM_MAX);
         if (tb05_wp != (tb05_rp - 1) % (AT_LINE_SIZE * AT_LINE_NUM_MAX))
             HAL_UART_Receive_IT(&huart2, at_receive_buf + tb05_wp, 1);
         else

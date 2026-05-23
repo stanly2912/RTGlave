@@ -2,8 +2,6 @@
 #include "BLE/at_ble.h"
 #include "rthw.h"
 #include "main.h"
-#include "stm32f1xx_hal.h"
-#include "stm32f1xx_hal_gpio.h"
 #include "tb05.h"
 #include <stdint.h>
 
@@ -36,7 +34,7 @@ void input_monitor(void *keycode) {
 
 void glave_main(void *keycode) {
     // Initialization
-    //tb05_init(0, "RTGlave", BLE_MASTER);
+    tb05_init(0, "RTGlave", BLE_MASTER);
 
     while (1) {
         rt_thread_suspend(rt_thread_self());
