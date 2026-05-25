@@ -38,6 +38,6 @@ int sqb_pack(uint8_t *packet, uint8_t type, uint16_t bodylen, const uint8_t *bod
 
 uint8_t sqb_type(const uint8_t *packet);
 uint16_t sqb_bodylen(const uint8_t *packet);
-uint8_t *sqb_body(const uint8_t *packet);
+uint8_t *sqb_body(uint8_t *packet);
 
 #endif

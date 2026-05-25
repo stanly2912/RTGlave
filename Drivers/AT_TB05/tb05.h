@@ -18,14 +18,34 @@ int tb05_write(int dev_id, const uint8_t *data, int size);
 
 /* 阻塞，直到所有读/写完成 */
 int tb05_read_blocking(int dev_id, uint8_t *data, int size);
-int tb05_write_blocking(int dev_id, const uint8_t *data, int size);
+
+/* 断开连接 */
+inline int tb05_disconnect(int dev_id) {
+    return at_blediscon(dev_id);
+}
+
 
 // Master functions
 
-/* 发起一次扫描，如果扫描到目标，则作为主机发起连接 */
-int tb05_connect(int dev_id, const char *name);
-/* 持续扫描，直到成功连接 */
-void tb05_force_connect(int dev_id, const char *name);
+/* 发起一次扫描 */
+static inline int tb05_scan(int dev_id, const char *name, char mac[12]) {
+    return at_blescan(dev_id, name, mac);
+}
+
+/* 持续扫描，直到发现目标 */
+static inline void tb05_force_scan(int dev_id, const char *name, char mac[12]) {
+    while (tb05_scan(dev_id, name, mac) != AT_OK) ;
+}
+
+/* 为主机发起连接 */
+static inline int tb05_connect(int dev_id, const char mac[12]) {
+    return at_bleconnect(dev_id, mac);
+}
+/* 持续发起连接，直到成功连接 */
+static inline void tb05_force_connect(int dev_id, const char *name) {
+    while (tb05_connect(dev_id, name) != AT_OK);
+}
+
 
 // Slave functions
 

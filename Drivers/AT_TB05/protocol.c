@@ -22,6 +22,6 @@ uint16_t sqb_bodylen(const uint8_t *packet) {
     return ret;
 }
 
-uint8_t *sqb_body(const uint8_t *packet) {
+uint8_t *sqb_body(uint8_t *packet) {
     return packet + 4;
 }

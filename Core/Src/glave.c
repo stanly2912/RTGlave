@@ -1,5 +1,8 @@
 #include "glave.h"
 #include "BLE/at_ble.h"
+#include "protocol.h"
+
+
 #include "rthw.h"
 #include "main.h"
 #include "tb05.h"
@@ -14,7 +17,7 @@ void input_monitor(void *keycode) {
         if (input_state == prev_state) {
             switch (input_state) {
                 case 0: *keycode32 = key_none; break;
-                case 1: *keycode32 = key_change; break;
+                case 1: *keycode32 = key_switch; break;
                 case 2: *keycode32 = key_select; break;
                 default: *keycode32 = key_undef; break;
             }
@@ -31,16 +34,40 @@ void input_monitor(void *keycode) {
     }
 }
 
+static uint8_t packetbuf[1024];
 
 void glave_main(void *keycode) {
+    // Declarations
+    uint32_t keycopy = key_none;
+    uint8_t cur_func = 0;
+    char remote_mac[2][12];
+    
     // Initialization
     tb05_init(0, "RTGlave", BLE_MASTER);
+    tb05_force_scan(0, "RT0", remote_mac[0]);
+    tb05_force_scan(0, "RT1", remote_mac[1]);
+
+    rt_thread_suspend(rt_thread_self());
 
     while (1) {
-        rt_thread_suspend(rt_thread_self());
-        if (*(int32_t *) keycode == key_select) {
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-            *(int32_t *) keycode = key_none;
+        keycopy = *(uint32_t *) keycode;
+        switch (keycopy) {
+            case key_none: break;
+            case key_switch: {
+                cur_func += 1;
+                int size = sqb_pack(packetbuf, SQB_TYPE_SWITCH, sizeof(cur_func), &cur_func);
+                tb05_write(0, packetbuf, size);
+                tb05_read_blocking(0, packetbuf, 4);
+            }
+            case key_select:
+                if (cur_func == 1) {
+                    
+                }
+                else {
+                }
+
+
+                break;
         }
     }
 }

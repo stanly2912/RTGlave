@@ -49,6 +49,14 @@ int tb05_read(int dev_id, uint8_t *data, int size) {
     return cur_size;
 }
 
+int tb05_read_blocking(int dev_id, uint8_t *data, int size) {
+    int ret = size;
+    while (size > 0) {
+        size -= tb05_read(dev_id, data, size);
+    }
+    return ret;
+}
+
 int tb05_write(int dev_id, const uint8_t *data, int size) {
     int ret = at_send(dev_id, data, size);
     if (ret == AT_OK) {
@@ -57,19 +65,6 @@ int tb05_write(int dev_id, const uint8_t *data, int size) {
     else {
         return -1;
     }
-}
-
-int tb05_connect(int dev_id, const char *name) {
-    char mac[12];
-    int ret = at_blescan(dev_id, name, mac);
-    if (ret == AT_OK) {
-        ret = at_bleconnect(dev_id, mac);
-    }
-    return ret;
-}
-
-void tb05_force_connect(int dev_id, const char *name) {
-    while (tb05_connect(dev_id, name) != AT_OK);
 }
 
 int tb05_listen(int dev_id) {
