@@ -46,28 +46,36 @@ void glave_main(void *keycode) {
     tb05_init(0, "RTGlave", BLE_MASTER);
     tb05_force_scan(0, "RT0", remote_mac[0]);
     tb05_force_scan(0, "RT1", remote_mac[1]);
-
+    
     rt_thread_suspend(rt_thread_self());
 
     while (1) {
         keycopy = *(uint32_t *) keycode;
+
         switch (keycopy) {
             case key_none: break;
             case key_switch: {
-                cur_func += 1;
-                int size = sqb_pack(packetbuf, SQB_TYPE_SWITCH, sizeof(cur_func), &cur_func);
-                tb05_write(0, packetbuf, size);
-                tb05_read_blocking(0, packetbuf, 4);
-            }
-            case key_select:
-                if (cur_func == 1) {
-                    
+                    cur_func += 1;
+                    if (cur_func > 2) {
+                        cur_func = 0;
+                    }
+                    int size = sqb_pack(packetbuf, SQB_TYPE_SWITCH, sizeof(cur_func), &cur_func);
+                    tb05_write(0, packetbuf, size);
+                    tb05_read_blocking(0, packetbuf, 4);
                 }
-                else {
-                }
-
-
                 break;
+            case key_select:
+                switch (cur_func) {
+                    case 0: // 疲劳检测
+                    case 1: // 心率
+                    case 2: // 血氧
+                    default: break;
+                }
+                break;
+            default: break;
         }
+
+        *(uint32_t*) keycode = key_none;
+        rt_thread_suspend(rt_thread_self());
     }
 }
