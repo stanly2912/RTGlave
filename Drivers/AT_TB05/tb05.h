@@ -4,7 +4,7 @@
 #include "at.h"
 #include "BLE/at_ble.h"
 
-#define TB05_HW_RST()
+#define TB05_HW_RST() do { HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET); HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);} while(0)
 #define TB05_BLINK(L)
 
 // Common fucntions
