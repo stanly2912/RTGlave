@@ -10,16 +10,15 @@
 volatile uint32_t tb05_rp, tb05_wp;
 volatile bool tb05_full;
 
-extern UART_HandleTypeDef huart2
-;
+extern UART_HandleTypeDef huart2;
 
 void tb05_init(int dev_id, const char *name, AT_BLE_Mode mode) {
     TB05_HW_RST();
     int ret = 1;
-		volatile int dbgret;
+	volatile int dbgret;
     while ((dbgret = at_rst(dev_id)) != AT_OK) {
         TB05_BLINK(ret);
-				TB05_HW_RST();
+		TB05_HW_RST();
         ret = !ret;
     }
     TB05_BLINK(0);
