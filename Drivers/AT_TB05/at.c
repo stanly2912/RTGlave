@@ -86,11 +86,26 @@ int at_strlen(const char *str) {
 }
 
 AT_Return at_rst(int dev_id) {
-    AT_Return ret;
+    volatile AT_Return ret;
     ret = at_send(dev_id, (const uint8_t *) "AT+RST\r\n", at_strlen("AT+RST\r\n"));
     if (ret != AT_OK) {
         return ret;
     }
-    ret = at_receive(dev_id);
+		
+		int i = 0;
+    while (1) {
+			ret = at_receive_line(dev_id, at_receive_buf + i);
+			
+			if (ret == 0) {
+				if (at_strcmp((char*)(at_receive_buf+i), "ready\r\n") == 0) {
+					break;
+				}
+				i = (i + AT_LINE_SIZE) % (AT_LINE_SIZE *AT_LINE_NUM_MAX);
+			}
+			else if (ret == AT_TIMEOUT) {
+				return AT_TIMEOUT;
+			}
+		}
+		while (at_receive_line(dev_id, at_receive_buf) != AT_TIMEOUT) {}
     return ret;
 }

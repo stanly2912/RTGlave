@@ -12,7 +12,8 @@ extern UART_HandleTypeDef huart2;
 extern volatile uint32_t tb05_rp, tb05_wp;
 extern volatile bool tb05_full;
 
-static int offset, finish;
+static volatile int offset;
+static volatile int finish;
 static uint8_t *current_line;
 
 static int connected = 0;
@@ -64,6 +65,7 @@ int at_receive_line(int dev_id, uint8_t *line) {
     switch (dev_id) {
         case 0: 
             huart = &huart2;
+				break;
         default:
             return AT_ERR;
     }
@@ -89,9 +91,9 @@ int at_receive_line(int dev_id, uint8_t *line) {
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     if (at_connected_get()) {
-        tb05_wp = (tb05_wp + 1) % (AT_LINE_SIZE * AT_LINE_NUM_MAX);
-        if (tb05_wp != (tb05_rp - 1) % (AT_LINE_SIZE * AT_LINE_NUM_MAX))
-            HAL_UART_Receive_IT(&huart2, at_receive_buf + tb05_wp, 1);
+        tb05_wp = (tb05_wp + 1);
+        if (tb05_wp - tb05_rp < (AT_LINE_SIZE * AT_LINE_NUM_MAX))
+            HAL_UART_Receive_IT(&huart2, at_receive_buf + tb05_wp % (AT_LINE_SIZE * AT_LINE_NUM_MAX), 1);
         else
             tb05_full = true;
     }

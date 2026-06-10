@@ -1,6 +1,5 @@
 #include "at_ble.h"
 #include <stdint.h>
-#include <sys/syslimits.h>
 
 int at_blename_set(int dev_id, const char *name, bool save_flash) {
     int ret = at_sendseq(dev_id, "AT+BLENAME=", name, "\r\n");

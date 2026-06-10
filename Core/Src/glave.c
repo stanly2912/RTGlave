@@ -44,8 +44,7 @@ void glave_main(void *keycode) {
     
     // Initialization
     tb05_init(0, "RTGlave", BLE_MASTER);
-    tb05_force_scan(0, "RT0", remote_mac[0]);
-    tb05_force_scan(0, "RT1", remote_mac[1]);
+    tb05_force_scan(0, "RTHelmet", remote_mac[0]);
     
     rt_thread_suspend(rt_thread_self());
 
@@ -67,8 +66,10 @@ void glave_main(void *keycode) {
             case key_select:
                 switch (cur_func) {
                     case 0: // 疲劳检测
+                    break;
                     case 1: // 心率
                     case 2: // 血氧
+
                     default: break;
                 }
                 break;
