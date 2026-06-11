@@ -34,8 +34,8 @@ int at_bleauth_set(int dev_id, const char *code) {
 }
 
 int at_bleadven_set(int dev_id, bool en) {
-    const char status[] = {en + '\0', '\0'};
-    int ret = at_sendseq(dev_id, "AT+BLEADVEB=", status, "\r\n");
+    const char status[] = {en + '0', '\0'};
+    int ret = at_sendseq(dev_id, "AT+BLEADVEN=", status, "\r\n");
     if (ret != AT_OK) return ret;
     return at_receive(dev_id);
 }
@@ -96,7 +96,12 @@ int at_blescan(int dev_id, const char *target_name, char mac[12]) {
 }
 
 int at_bleconnect(int dev_id, const char mac[12]) {
-    at_sendseq(dev_id, "AT+BLECONNECT=", mac, "\r\n");
+    char _mac[13];
+    for (int i = 0; i < 13; i++) {
+        _mac[i] = mac[i];
+    }
+    _mac[12] = '\0';
+    at_sendseq(dev_id, "AT+BLECONNECT=", _mac, "\r\n");
     return at_receive(dev_id);
 }
 

@@ -6,6 +6,8 @@
 
 #include "main.h"
 #include "protocol.h"
+#include "stm32f1xx_hal.h"
+#include "stm32f1xx_hal_def.h"
 
 volatile uint32_t tb05_rp, tb05_wp;
 volatile bool tb05_full;
@@ -13,23 +15,24 @@ volatile bool tb05_full;
 extern UART_HandleTypeDef huart2;
 
 void tb05_init(int dev_id, const char *name, AT_BLE_Mode mode) {
-    TB05_HW_RST();
     int ret = 1;
-	volatile int dbgret;
-    while ((dbgret = at_rst(dev_id)) != AT_OK) {
-        TB05_BLINK(ret);
-		TB05_HW_RST();
-        ret = !ret;
+    while (ret != 0) {
+        TB05_HW_RST();
+        HAL_Delay(10);
+        ret = at_rst(dev_id);
+        if (ret != AT_OK) {
+            continue;
+        }
+        HAL_Delay(10);
+
+        ret = at_blename_set(dev_id, name, 0);
+        HAL_Delay(10);
+        if (ret != AT_OK) {
+            continue;
+        }
+
+        ret = at_blemode_set(dev_id, mode);
     }
-    TB05_BLINK(0);
-
-    ret = at_blename_set(dev_id, name, 0);
-    TB05_BLINK(ret);
-
-    ret = at_blemode_set(dev_id, mode);
-    TB05_BLINK(ret);
-
-    while (ret != AT_OK) ;
 }
 
 int tb05_read(int dev_id, uint8_t *data, int size) {

@@ -20,7 +20,7 @@ int tb05_write(int dev_id, const uint8_t *data, int size);
 int tb05_read_blocking(int dev_id, uint8_t *data, int size);
 
 /* 断开连接 */
-inline int tb05_disconnect(int dev_id) {
+static inline int tb05_disconnect(int dev_id) {
     return at_blediscon(dev_id);
 }
 
@@ -42,8 +42,8 @@ static inline int tb05_connect(int dev_id, const char mac[12]) {
     return at_bleconnect(dev_id, mac);
 }
 /* 持续发起连接，直到成功连接 */
-static inline void tb05_force_connect(int dev_id, const char *name) {
-    while (tb05_connect(dev_id, name) != AT_OK);
+static inline void tb05_force_connect(int dev_id, const char mac[12]) {
+    while (tb05_connect(dev_id, mac) != AT_OK);
 }
 
 

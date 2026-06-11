@@ -5,12 +5,13 @@
 
 #include "rthw.h"
 #include "main.h"
+#include "rtthread.h"
 #include "tb05.h"
 #include <stdint.h>
 
 void input_monitor(void *keycode) {
     int32_t *keycode32 = (int32_t *) keycode;
-    uint8_t input_state, prev_state = 0;
+    volatile uint8_t input_state, prev_state = 0;
     while (1) {
         input_state = (!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5) << 1)
                     | !HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6);
@@ -54,13 +55,17 @@ void glave_main(void *keycode) {
         switch (keycopy) {
             case key_none: break;
             case key_switch: {
+                    rt_enter_critical();
                     cur_func += 1;
                     if (cur_func > 2) {
                         cur_func = 0;
                     }
                     int size = sqb_pack(packetbuf, SQB_TYPE_SWITCH, sizeof(cur_func), &cur_func);
+                    tb05_force_connect(0, remote_mac[0]);          
                     tb05_write(0, packetbuf, size);
                     tb05_read_blocking(0, packetbuf, 4);
+                    tb05_disconnect(0);
+                    rt_exit_critical();
                 }
                 break;
             case key_select:

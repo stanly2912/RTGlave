@@ -79,8 +79,8 @@ void rtos_startup() {
   
   th_input = &thread_pool[0];
   th_main = &thread_pool[1];
-  rt_thread_init(th_input, "input", input_monitor, (void *)&channel, stack0, sizeof stack0, 11, 5);
-  rt_thread_init(th_main, "glvmain", glave_main, (void *)&channel, stack1, sizeof stack1, 10, 20);
+  rt_thread_init(th_input, "input", input_monitor, (void *)&channel, stack0, sizeof stack0, 6, 20);
+  rt_thread_init(th_main, "glvmain", glave_main, (void *)&channel, stack1, sizeof stack1, 5, 20);
   rt_thread_startup(th_input);
   rt_thread_startup(th_main);
 
@@ -229,7 +229,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, RST_Pin|GPIO_PIN_4, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, RST_Pin|GPIO_PIN_7, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -238,8 +238,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : RST_Pin PA4 */
-  GPIO_InitStruct.Pin = RST_Pin|GPIO_PIN_4;
+  /*Configure GPIO pins : RST_Pin PA7 */
+  GPIO_InitStruct.Pin = RST_Pin|GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
