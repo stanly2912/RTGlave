@@ -8,6 +8,7 @@
 #include "protocol.h"
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_hal_def.h"
+#include "stm32f1xx_hal_uart.h"
 
 volatile uint32_t tb05_rp, tb05_wp;
 volatile bool tb05_full;
@@ -18,7 +19,7 @@ void tb05_init(int dev_id, const char *name, AT_BLE_Mode mode) {
     int ret = 1;
     while (ret != 0) {
         TB05_HW_RST();
-        HAL_Delay(10);
+        HAL_Delay(100);
         ret = at_rst(dev_id);
         if (ret != AT_OK) {
             continue;
@@ -79,4 +80,30 @@ int tb05_listen(int dev_id) {
 		return 1;
 	}
 	return 0;
+}
+
+int tb05_disconnect(int dev_id) {
+    return at_blediscon(dev_id);
+}
+
+
+// Master functions
+
+/* 发起一次扫描 */
+int tb05_scan(int dev_id, const char *name, char mac[12]) {
+    return at_blescan(dev_id, name, mac);
+}
+
+/* 持续扫描，直到发现目标 */
+void tb05_force_scan(int dev_id, const char *name, char mac[12]) {
+    while (tb05_scan(dev_id, name, mac) != AT_OK) ;
+}
+
+/* 为主机发起连接 */
+int tb05_connect(int dev_id, const char mac[12]) {
+    return at_bleconnect(dev_id, mac);
+}
+/* 持续发起连接，直到成功连接 */
+void tb05_force_connect(int dev_id, const char mac[12]) {
+    while (tb05_connect(dev_id, mac) != AT_OK) HAL_Delay(50);
 }

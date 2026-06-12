@@ -79,9 +79,8 @@ void rtos_startup() {
   
   th_input = &thread_pool[0];
   th_main = &thread_pool[1];
-  rt_thread_init(th_input, "input", input_monitor, (void *)&channel, stack0, sizeof stack0, 6, 20);
+  rt_thread_init(th_input, "input", input_monitor, (void *)&channel, stack0, sizeof stack0, 4, 20);
   rt_thread_init(th_main, "glvmain", glave_main, (void *)&channel, stack1, sizeof stack1, 5, 20);
-  rt_thread_startup(th_input);
   rt_thread_startup(th_main);
 
   /* end */

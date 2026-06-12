@@ -9,6 +9,8 @@
 #include "tb05.h"
 #include <stdint.h>
 
+extern UART_HandleTypeDef huart2;
+
 void input_monitor(void *keycode) {
     int32_t *keycode32 = (int32_t *) keycode;
     volatile uint8_t input_state, prev_state = 0;
@@ -24,7 +26,6 @@ void input_monitor(void *keycode) {
             }
 
             if (*keycode32 != key_undef && *keycode32 != key_none) {
-                rt_thread_resume(th_main);
                 rt_thread_delay(200);
             }
         }
@@ -47,25 +48,25 @@ void glave_main(void *keycode) {
     tb05_init(0, "RTGlave", BLE_MASTER);
     tb05_force_scan(0, "RTHelmet", remote_mac[0]);
     
-    rt_thread_suspend(rt_thread_self());
+    rt_thread_startup(th_input);
 
     while (1) {
+        rt_enter_critical();
         keycopy = *(uint32_t *) keycode;
 
         switch (keycopy) {
             case key_none: break;
             case key_switch: {
-                    rt_enter_critical();
                     cur_func += 1;
                     if (cur_func > 2) {
                         cur_func = 0;
                     }
                     int size = sqb_pack(packetbuf, SQB_TYPE_SWITCH, sizeof(cur_func), &cur_func);
-                    tb05_force_connect(0, remote_mac[0]);          
+                    tb05_force_connect(0, remote_mac[0]);
+                    HAL_UART_Receive_IT(&huart2, at_receive_buf, 1);
                     tb05_write(0, packetbuf, size);
-                    tb05_read_blocking(0, packetbuf, 4);
+                    tb05_read_blocking(0, packetbuf, 100);
                     tb05_disconnect(0);
-                    rt_exit_critical();
                 }
                 break;
             case key_select:
@@ -82,6 +83,6 @@ void glave_main(void *keycode) {
         }
 
         *(uint32_t*) keycode = key_none;
-        rt_thread_suspend(rt_thread_self());
+        rt_exit_critical();
     }
 }

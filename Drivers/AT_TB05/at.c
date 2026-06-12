@@ -97,7 +97,7 @@ AT_Return at_rst(int dev_id) {
 			ret = at_receive_line(dev_id, at_receive_buf + i);
 			
 			if (ret == 0) {
-				if (at_strcmp((char*)(at_receive_buf+i), "ready\r\n") == 0) {
+				if (at_strcmp((char*)(at_receive_buf+i), "OK\r\n") == 0) {
 					break;
 				}
 				i = (i + AT_LINE_SIZE) % (AT_LINE_SIZE *AT_LINE_NUM_MAX);

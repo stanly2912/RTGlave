@@ -3,8 +3,9 @@
 
 #include "at.h"
 #include "BLE/at_ble.h"
+#include "stm32f1xx_hal.h"
 
-#define TB05_HW_RST() do { HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET); HAL_Delay(10); HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);} while(0)
+#define TB05_HW_RST() do { HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET); HAL_Delay(100); HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);} while(0)
 #define TB05_BLINK(L)
 
 // Common fucntions
@@ -20,31 +21,21 @@ int tb05_write(int dev_id, const uint8_t *data, int size);
 int tb05_read_blocking(int dev_id, uint8_t *data, int size);
 
 /* 断开连接 */
-static inline int tb05_disconnect(int dev_id) {
-    return at_blediscon(dev_id);
-}
+int tb05_disconnect(int dev_id);
 
 
 // Master functions
 
 /* 发起一次扫描 */
-static inline int tb05_scan(int dev_id, const char *name, char mac[12]) {
-    return at_blescan(dev_id, name, mac);
-}
+int tb05_scan(int dev_id, const char *name, char mac[12]);
 
 /* 持续扫描，直到发现目标 */
-static inline void tb05_force_scan(int dev_id, const char *name, char mac[12]) {
-    while (tb05_scan(dev_id, name, mac) != AT_OK) ;
-}
+void tb05_force_scan(int dev_id, const char *name, char mac[12]) ;
 
 /* 为主机发起连接 */
-static inline int tb05_connect(int dev_id, const char mac[12]) {
-    return at_bleconnect(dev_id, mac);
-}
+int tb05_connect(int dev_id, const char mac[12]);
 /* 持续发起连接，直到成功连接 */
-static inline void tb05_force_connect(int dev_id, const char mac[12]) {
-    while (tb05_connect(dev_id, mac) != AT_OK);
-}
+void tb05_force_connect(int dev_id, const char mac[12]);
 
 
 // Slave functions
