@@ -45,8 +45,12 @@ void glave_main(void *keycode) {
     char remote_mac[2][12];
     
     // Initialization
+    rt_enter_critical();
     tb05_init(0, "RTGlave", BLE_MASTER);
+    
+    while (at_wait_ok() != AT_TIMEOUT) {}
     tb05_force_scan(0, "RTHelmet", remote_mac[0]);
+    rt_exit_critical();
     
     rt_thread_startup(th_input);
 
@@ -63,9 +67,6 @@ void glave_main(void *keycode) {
                     }
                     int size = sqb_pack(packetbuf, SQB_TYPE_SWITCH, sizeof(cur_func), &cur_func);
                     tb05_force_connect(0, remote_mac[0]);
-                    HAL_UART_Receive_IT(&huart2, at_receive_buf, 1);
-                    tb05_write(0, packetbuf, size);
-                    tb05_read_blocking(0, packetbuf, 100);
                     tb05_disconnect(0);
                 }
                 break;
