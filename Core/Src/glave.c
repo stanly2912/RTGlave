@@ -85,7 +85,7 @@ void glave_main(void *keycode) {
                     ret = at_blestate(0, &blestate);
                     if (ret != AT_OK) break;
                     if (blestate == 0) {
-                        at_bleconnect(0, remote_mac[0]);
+                        tb05_connect(0, remote_mac[0]);
                     }
                     else {
                         at_enter_tranfer(0);
@@ -104,9 +104,27 @@ void glave_main(void *keycode) {
                         if (blestate != 0) {
                             tb05_disconnect(0);
                         }
-                        ret = at_bleconnect(0, remote_mac[1]);//改为 remote_mac[1]
+                        ret = tb05_connect(0, remote_mac[1]);//改为 remote_mac[1]
+                        if (ret == AT_TIMEOUT) {
+                            uint8_t *p;
+                            int wait = 5;
+                            while (wait--) {
+                                p = at_wait_for((const uint8_t *)"+EVENT", 6, AT_TIMEOUT_TIME);
+                                if (p != NULL) {
+                                    ret = AT_OK;
+                                    break;
+                                }
+                            }
+                            if (wait == -1) {
+                                tb05_disconnect(0);
+                                at_pop(at_readable_len());
+                                break;
+                            }
+                        }
                         if (ret == AT_OK) {
-                            size = sqb_pack(packbuf, SQB_TYPE_DATA, 0, NULL);
+                            uint8_t bd = 0;
+                            HAL_Delay(500);
+                            size = sqb_pack(packbuf, SQB_TYPE_SELECT, 1, &bd);
                             at_send(0, packbuf, size);
                             const uint8_t header = SQB_HEAD;
                             uint8_t *rcv = at_wait_for(&header, 1, AT_TIMEOUT_TIME);
@@ -134,10 +152,9 @@ void glave_main(void *keycode) {
 
                                             /* 开始语音播报 */
                                             uint8_t body[2] = {0, sqb_body(packbuf)[0]};
-                                            size = sqb_pack(packbuf, SQB_TYPE_SELECT, sizeof body, body);
-                                            tb05_disconnect(0);
- 
-                                            at_bleconnect(0, remote_mac[0]);
+                                            size = sqb_pack(packbuf, SQB_TYPE_DATA, sizeof body, body);
+
+                                            // TODO: 最后冲刺！！！
                                         }
                                         else {
                                             at_pop(at_readable_len());
@@ -158,7 +175,7 @@ void glave_main(void *keycode) {
                         ret = at_blestate(0, &blestate);
                         if (ret != AT_OK) break;
                         if (blestate == 0) {
-                            at_bleconnect(0, remote_mac[0]);
+                            tb05_connect(0, remote_mac[0]);
                         }
                         else {
                             at_enter_tranfer(0);
