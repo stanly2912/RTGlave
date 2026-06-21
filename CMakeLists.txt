@@ -47,12 +47,17 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${CMAKE_CURRENT_LIST_DIR}/Core/Src/glave.c
+    ${CMAKE_CURRENT_LIST_DIR}/Core/Src/fuckai.c
+    ${CMAKE_CURRENT_LIST_DIR}/Drivers/Fucklib/max30102.c
+    Drivers/Fucklib/algorithm.c
+    Drivers/Fucklib/max30102_module.c
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ${CMAKE_CURRENT_LIST_DIR}/Drivers/AT_TB05
+    ${CMAKE_CURRENT_LIST_DIR}/Drivers/Fucklib
 )
 
 # Add project symbols (macros)

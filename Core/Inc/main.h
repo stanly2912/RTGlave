@@ -59,6 +59,8 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define RST_Pin GPIO_PIN_1
 #define RST_GPIO_Port GPIOA
+#define MAX30102_INT_Pin GPIO_PIN_5
+#define MAX30102_INT_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
