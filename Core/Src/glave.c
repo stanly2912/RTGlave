@@ -75,7 +75,7 @@ void glave_main(void *keycode) {
             case key_none: break;
             case key_switch: {
                     cur_func += 1;
-                    if (cur_func > 2) {
+                    if (cur_func > 4) {
                         cur_func = 0;
                     }
 
@@ -151,10 +151,31 @@ void glave_main(void *keycode) {
                                             at_pop(sqb_bodylen(packbuf));
 
                                             /* 开始语音播报 */
-                                            uint8_t body[2] = {0, sqb_body(packbuf)[0]};
-                                            size = sqb_pack(packbuf, SQB_TYPE_DATA, sizeof body, body);
+                                            tb05_disconnect(0);
+                                            ret = tb05_connect(0, remote_mac[0]);
+                                            if (ret == AT_TIMEOUT) {
+                                                uint8_t *p;
+                                                int wait = 5;
+                                                while (wait--) {
+                                                    p = at_wait_for((const uint8_t *)"+EVENT", 6, AT_TIMEOUT_TIME);
+                                                    if (p != NULL) {
+                                                        ret = AT_OK;
+                                                        break;
+                                                    }
+                                                }
+                                                if (wait == -1) {
+                                                    tb05_disconnect(0);
+                                                    at_pop(at_readable_len());
+                                                    break;
+                                                }
+                                            }
+                                            
+                                            uint32_t t = *(uint32_t*) sqb_body(packbuf);
+                                            size = sqb_pack(packbuf, SQB_TYPE_DATA, 4, (uint8_t *)&t);
 
                                             // TODO: 最后冲刺！！！
+                                            HAL_Delay(1000);
+                                            at_send(0, packbuf, size);
                                         }
                                         else {
                                             at_pop(at_readable_len());
@@ -168,6 +189,7 @@ void glave_main(void *keycode) {
                     break;
                     case 1: // 心率
                     case 2: // 血氧
+                    case 4: // 卡路里
                     {
                         int ret, blestate, size;
                         size = sqb_pack(packbuf, SQB_TYPE_SELECT, sizeof(cur_func), &cur_func);
@@ -182,6 +204,43 @@ void glave_main(void *keycode) {
                         }
                         at_send(0, packbuf, size);
                     }
+                    break;
+                    case 3:
+                    {
+                        int ret, blestate, size;
+                        at_exit_tranfer(0);
+                        ret = at_blestate(0, &blestate);
+                        if (ret != AT_OK) break;
+                        if (blestate != 0) {
+                            tb05_disconnect(0);
+                        }
+                        ret = tb05_connect(0, remote_mac[1]);//改为 remote_mac[1]
+                        if (ret == AT_TIMEOUT) {
+                            uint8_t *p;
+                            int wait = 5;
+                            while (wait--) {
+                                p = at_wait_for((const uint8_t *)"+EVENT", 6, AT_TIMEOUT_TIME);
+                                if (p != NULL) {
+                                    ret = AT_OK;
+                                    break;
+                                }
+                            }
+                            if (wait == -1) {
+                                tb05_disconnect(0);
+                                at_pop(at_readable_len());
+                                break;
+                            }
+                        }
+                        if (ret == AT_OK) {
+                            uint8_t bd = 0;
+                            HAL_Delay(500);
+                            size = sqb_pack(packbuf, SQB_TYPE_SELECT, 1, &bd);
+                            at_send(0, packbuf, size);
+                            HAL_Delay(200);
+                            tb05_disconnect(0);
+                        }
+                    }
+                    break;
                     default: break;
                 }
                 break;
