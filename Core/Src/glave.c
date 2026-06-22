@@ -13,7 +13,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "max30102_module.h"
+
 extern UART_HandleTypeDef huart2;
+extern Health_Data_t g_health_data;
 
 void input_monitor(void *keycode) {
     int32_t *keycode32 = (int32_t *) keycode;
@@ -192,7 +195,6 @@ void glave_main(void *keycode) {
                     case 4: // 卡路里
                     {
                         int ret, blestate, size;
-                        size = sqb_pack(packbuf, SQB_TYPE_SELECT, sizeof(cur_func), &cur_func);
                         at_exit_tranfer(0);
                         ret = at_blestate(0, &blestate);
                         if (ret != AT_OK) break;
@@ -202,6 +204,19 @@ void glave_main(void *keycode) {
                         else {
                             at_enter_tranfer(0);
                         }
+
+                        health_data_t dat = { 
+                            g_health_data.heart_rate,
+                            g_health_data.spo2,
+                            g_health_data.kcal_x100 / 100,
+                            g_health_data.sport_time_s,
+                            g_health_data.alert_code
+                        };
+
+                        size = sqb_pack(packbuf, SQB_TYPE_DATA, sizeof(dat), (const uint8_t *)&dat);
+                        at_send(0, packbuf, size);
+
+                        size = sqb_pack(packbuf, SQB_TYPE_SELECT, sizeof(cur_func), &cur_func);
                         at_send(0, packbuf, size);
                     }
                     break;
