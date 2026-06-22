@@ -55,7 +55,7 @@ rt_thread_t th_input, th_main, th_fuck;
 
 static uint8_t stack0[512];
 static uint8_t stack1[4096];
-static uint8_t stack2[8192];
+static uint8_t stack2[4096];
 
 volatile uint32_t channel;
 

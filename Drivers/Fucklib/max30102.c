@@ -1,15 +1,14 @@
 #include "max30102.h"
-#include "max30102_module.h"
 #include "main.h"
 #include "rtthread.h"
 
-extern I2C_HandleTypeDef hi2c1;
-
 #define MAX_BRIGHTNESS 255
 
-uint32_t aun_ir_buffer[500];
+extern I2C_HandleTypeDef hi2c1;
+
+uint32_t aun_ir_buffer[BUFFER_SIZE];   /* IR 数据缓存：100 点，节省 RAM */
 int32_t n_ir_buffer_length;
-uint32_t aun_red_buffer[500];
+uint32_t aun_red_buffer[BUFFER_SIZE];  /* RED 数据缓存：100 点，节省 RAM */
 int32_t n_sp02;
 int8_t ch_spo2_valid;
 int32_t n_heart_rate;
@@ -142,7 +141,7 @@ void max30102_init(void)
 
     rt_thread_delay(100);
 
-    n_ir_buffer_length = 100;
+    n_ir_buffer_length = BUFFER_SIZE;
 
     for (i = 0; i < n_ir_buffer_length; i++)
     {
@@ -210,91 +209,57 @@ void maxim_max30102_read_fifo(uint32_t *pun_red_led, uint32_t *pun_ir_led)
 
 void max30102_Read_Data(int32_t *heart_rate, int32_t *sp02)
 {
-    uint32_t un_min, un_max, un_prev_data;
     int i;
-    float f_temp;
-    int32_t n_brightness = 0;
 
-    while (1)
+    /*
+     * RAM 优化说明：
+     * 原始例程使用 500 点 RED/IR 缓存，并且 algorithm.c 中还有多个 500 点数组，
+     * 在 STM32F103C8T6（20KB RAM）上很容易爆 RAM。
+     *
+     * 这里统一使用 algorithm.h 中的 BUFFER_SIZE，目前为 100 点。
+     * 每次读取 100 个样本后计算一次心率和血氧，RAM 占用会明显降低。
+     */
+    n_ir_buffer_length = BUFFER_SIZE;
+
+    for (i = 0; i < n_ir_buffer_length; i++)
     {
-        un_min = 0x3FFFFU;
-        un_max = 0;
+        rt_thread_delay(10);
+        max30102_read_one_sample(&aun_red_buffer[i], &aun_ir_buffer[i]);
+    }
 
-        for (i = 100; i < 500; i++)
-        {
-            aun_red_buffer[i - 100] = aun_red_buffer[i];
-            aun_ir_buffer[i - 100]  = aun_ir_buffer[i];
+    maxim_heart_rate_and_oxygen_saturation(
+        aun_ir_buffer,
+        n_ir_buffer_length,
+        aun_red_buffer,
+        &n_sp02,
+        &ch_spo2_valid,
+        &n_heart_rate,
+        &ch_hr_valid);
 
-            if (un_min > aun_red_buffer[i])
-            {
-                un_min = aun_red_buffer[i];
-            }
-            if (un_max < aun_red_buffer[i])
-            {
-                un_max = aun_red_buffer[i];
-            }
-        }
-
-        for (i = 400; i < 500; i++)
-        {
-            un_prev_data = aun_red_buffer[i - 1];
-
-            rt_thread_delay(10);
-            max30102_read_one_sample(&aun_red_buffer[i], &aun_ir_buffer[i]);
-
-            if (aun_red_buffer[i] > un_prev_data)
-            {
-                f_temp = (float)(aun_red_buffer[i] - un_prev_data);
-                if (un_max != un_min)
-                {
-                    f_temp /= (float)(un_max - un_min);
-                }
-                f_temp *= MAX_BRIGHTNESS;
-                n_brightness -= (int32_t)f_temp;
-                if (n_brightness < 0)
-                {
-                    n_brightness = 0;
-                }
-            }
-            else
-            {
-                f_temp = (float)(un_prev_data - aun_red_buffer[i]);
-                if (un_max != un_min)
-                {
-                    f_temp /= (float)(un_max - un_min);
-                }
-                f_temp *= MAX_BRIGHTNESS;
-                n_brightness += (int32_t)f_temp;
-                if (n_brightness > MAX_BRIGHTNESS)
-                {
-                    n_brightness = MAX_BRIGHTNESS;
-                }
-            }
-        }
-
-        maxim_heart_rate_and_oxygen_saturation(
-            aun_ir_buffer,
-            500,
-            aun_red_buffer,
-            &n_sp02,
-            &ch_spo2_valid,
-            &n_heart_rate,
-            &ch_hr_valid);
-
-        if ((ch_hr_valid == 1) && (ch_spo2_valid == 1) &&
-            (n_heart_rate > 50) && (n_heart_rate < 150) &&
-            (n_sp02 < 101) && (n_sp02 > 80))
-        {
-            *heart_rate = n_heart_rate;
-            *sp02 = n_sp02;
-            break;
-        }
-        else
-        {
-            *heart_rate = 0;
-            *sp02 = 0;
-            break;
-        }
+    /*
+     * 这里只做底层数据合理性判断：
+     * 心率：40~220 bpm
+     * 血氧：70~100 %
+     * 更具体的预警逻辑放在 main.c 的 g_health_data.alert_code 中处理。
+     */
+    if ((ch_hr_valid == 1) && (ch_spo2_valid == 1) &&
+        (n_heart_rate >= 40) && (n_heart_rate <= 220) &&
+        (n_sp02 >= 70) && (n_sp02 <= 100))
+    {
+        *heart_rate = n_heart_rate;
+        *sp02 = n_sp02;
+    }
+    else
+    {
+        *heart_rate = 0;
+        *sp02 = 0;
     }
 }
+
+
+
+
+
+
+
 

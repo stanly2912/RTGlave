@@ -75,7 +75,7 @@ static  int32_t an_x[ BUFFER_SIZE]; //ir
 static  int32_t an_y[ BUFFER_SIZE]; //red
 
 /**
-* \brief       计算心率和SpO2水平
+* \brief       �������ʺ�SpO2ˮƽ
 * \par          Details
 *               By detecting  peaks of PPG cycle and corresponding AC/DC of red/infra-red signal, the ratio for the SPO2 is computed.
 *               Since this algorithm is aiming for Arm M0/M3. formaula for SPO2 did not achieve the accuracy due to register overflow.
@@ -83,13 +83,13 @@ static  int32_t an_y[ BUFFER_SIZE]; //red
 *
 
 
-* \param[in]    *pun_ir_buffer           - 红外传感器数据缓冲区
-* \param[in]     n_ir_buffer_length      - 红外数据存储长度
-* \param[in]    *pun_red_buffer          - 红色LED器数据缓冲区
-* \param[out]    *pn_spo2                - 血氧数值
-* \param[out]    *pch_spo2_valid         - 如果计算的SpO2值有效，则为1
-* \param[out]    *pn_heart_rate          - 计算心率值
-* \param[out]    *pch_hr_valid           - 如果计算的心率值有效，则为1
+* \param[in]    *pun_ir_buffer           - ���⴫�������ݻ�����
+* \param[in]     n_ir_buffer_length      - �������ݴ洢����
+* \param[in]    *pun_red_buffer          - ��ɫLED�����ݻ�����
+* \param[out]    *pn_spo2                - Ѫ����ֵ
+* \param[out]    *pch_spo2_valid         - ��������SpO2ֵ��Ч����Ϊ1
+* \param[out]    *pn_heart_rate          - ��������ֵ
+* \param[out]    *pch_hr_valid           - ������������ֵ��Ч����Ϊ1
 *
 * \retval       None
 */                            
@@ -113,47 +113,47 @@ void maxim_heart_rate_and_oxygen_saturation(uint32_t *pun_ir_buffer,  int32_t n_
     int32_t n_y_dc_max_idx, n_x_dc_max_idx; 
     int32_t an_ratio[5],n_ratio_average; 
     int32_t n_nume,  n_denom ;
-    // remove DC of ir signal    去除ir信号的直流
+    // remove DC of ir signal    ȥ��ir�źŵ�ֱ��
     un_ir_mean =0; 
     for (k=0 ; k<n_ir_buffer_length ; k++ ) un_ir_mean += pun_ir_buffer[k] ;
     un_ir_mean =un_ir_mean/n_ir_buffer_length ;
     for (k=0 ; k<n_ir_buffer_length ; k++ )  an_x[k] =  pun_ir_buffer[k] - un_ir_mean ; 
     
-    // 4 pt Moving Average        pt移动平均线
+    // 4 pt Moving Average        pt�ƶ�ƽ����
     for(k=0; k< BUFFER_SIZE-MA4_SIZE; k++){
         n_denom= ( an_x[k]+an_x[k+1]+ an_x[k+2]+ an_x[k+3]);
         an_x[k]=  n_denom/(int32_t)4; 
     }
 
-    // get difference of smoothed IR signal  得到平滑的红外信号差
+    // get difference of smoothed IR signal  �õ�ƽ���ĺ����źŲ�
     
     for( k=0; k<BUFFER_SIZE-MA4_SIZE-1;  k++)
         an_dx[k]= (an_x[k+1]- an_x[k]);
 
-    // 2-pt Moving Average to an_dx          pt移动平均线到an_dx
+    // 2-pt Moving Average to an_dx          pt�ƶ�ƽ���ߵ�an_dx
     for(k=0; k< BUFFER_SIZE-MA4_SIZE-2; k++){
         an_dx[k] =  ( an_dx[k]+an_dx[k+1])/2 ;
     }
     
     // hamming window
     // flip wave form so that we can detect valley with peak detector
-    //翻转波形，这样我们就可以用峰值检测器检测山谷
+    //��ת���Σ��������ǾͿ����÷�ֵ��������ɽ��
     for ( i=0 ; i<BUFFER_SIZE-HAMMING_SIZE-MA4_SIZE-2 ;i++){
         s= 0;
         for( k=i; k<i+ HAMMING_SIZE ;k++){
             s -= an_dx[k] *auw_hamm[k-i] ; 
                      }
-        an_dx[i]= s/ (int32_t)1146; // divide by sum of auw_hamm   除以auw_hamm的和
+        an_dx[i]= s/ (int32_t)1146; // divide by sum of auw_hamm   ����auw_hamm�ĺ�
     }
 
  
-    n_th1=0; // threshold calculation   门坎值计算分割
+    n_th1=0; // threshold calculation   �ſ�ֵ����ָ�
     for ( k=0 ; k<BUFFER_SIZE-HAMMING_SIZE ;k++){
         n_th1 += ((an_dx[k]>0)? an_dx[k] : ((int32_t)0-an_dx[k])) ;
     }
     n_th1= n_th1/ ( BUFFER_SIZE-HAMMING_SIZE);
     // peak location is acutally index for sharpest location of raw signal since we flipped the signal    
-    //峰值位置实际上是我们翻转信号后原始信号最尖锐位置的索引    
+    //��ֵλ��ʵ���������Ƿ�ת�źź�ԭʼ�ź������λ�õ�����    
     maxim_find_peaks( an_dx_peak_locs, &n_npks, an_dx, BUFFER_SIZE-HAMMING_SIZE, n_th1, 8, 5 );//peak_height, peak_distance, max_num_peaks 
 
     n_peak_interval_sum =0;
@@ -161,14 +161,14 @@ void maxim_heart_rate_and_oxygen_saturation(uint32_t *pun_ir_buffer,  int32_t n_
         for (k=1; k<n_npks; k++)
        {
           n_peak_interval_sum += (an_dx_peak_locs[k]-an_dx_peak_locs[k -1]);
-//          printf ("n_peak_interval_sum=%d\r\n",n_peak_interval_sum);//测试点
+//          printf ("n_peak_interval_sum=%d\r\n",n_peak_interval_sum);//���Ե�
        }
            
         n_peak_interval_sum=n_peak_interval_sum/(n_npks-1);
-        *pn_heart_rate=(int32_t)(6000/n_peak_interval_sum);// beats per minutes   每分钟心跳数
+        *pn_heart_rate=(int32_t)(6000/n_peak_interval_sum);// beats per minutes   ÿ����������
         *pch_hr_valid  = 1;
        
-//       printf ("pn_heart_rate=%d\r\n",*pn_heart_rate);//测试点
+//       printf ("pn_heart_rate=%d\r\n",*pn_heart_rate);//���Ե�
     }
     else  {
         *pn_heart_rate = -999;
@@ -180,13 +180,13 @@ void maxim_heart_rate_and_oxygen_saturation(uint32_t *pun_ir_buffer,  int32_t n_
 
 
     // raw value : RED(=y) and IR(=X)
-    // we need to assess DC and AC value of ir and red PPG.   我们需要评估ir和红色PPG的直流和交流值。
+    // we need to assess DC and AC value of ir and red PPG.   ������Ҫ����ir�ͺ�ɫPPG��ֱ���ͽ���ֵ��
     for (k=0 ; k<n_ir_buffer_length ; k++ )  {
         an_x[k] =  pun_ir_buffer[k] ; 
         an_y[k] =  pun_red_buffer[k] ; 
     }
 
-    // find precise min near an_ir_valley_locs    在an_ir_valley_locs附近找到精确的min
+    // find precise min near an_ir_valley_locs    ��an_ir_valley_locs�����ҵ���ȷ��min
     n_exact_ir_valley_locs_count =0; 
     for(k=0 ; k<n_npks ;k++){
         un_only_once =1;
@@ -206,7 +206,7 @@ void maxim_heart_rate_and_oxygen_saturation(uint32_t *pun_ir_buffer,  int32_t n_
         }
     }
     if (n_exact_ir_valley_locs_count <2 ){
-       *pn_spo2 =  -999 ; // do not use SPO2 since signal ratio is out of range   不使用SPO2，因为信号比超出了范围
+       *pn_spo2 =  -999 ; // do not use SPO2 since signal ratio is out of range   ��ʹ��SPO2����Ϊ�źűȳ����˷�Χ
        *pch_spo2_valid  = 0; 
        return;
     }
@@ -216,11 +216,11 @@ void maxim_heart_rate_and_oxygen_saturation(uint32_t *pun_ir_buffer,  int32_t n_
         an_y[k]=( an_y[k]+an_y[k+1]+ an_y[k+2]+ an_y[k+3])/(int32_t)4;
     }
 
-    //using an_exact_ir_valley_locs , find ir-red DC andir-red AC for SPO2 calibration ratio、
-    //使用an_exact_ir_valley_locs，找到红色直流和红色交流的SPO2校准比
+    //using an_exact_ir_valley_locs , find ir-red DC andir-red AC for SPO2 calibration ratio��
+    //ʹ��an_exact_ir_valley_locs���ҵ���ɫֱ���ͺ�ɫ������SPO2У׼��
     
     //finding AC/DC maximum of raw ir * red between two valley locations
-    //发现两个山谷位置之间的AC/DC最大原始ir *红
+    //��������ɽ��λ��֮���AC/DC���ԭʼir *��
     
     n_ratio_average =0; 
     n_i_ratio_count =0; 
@@ -228,15 +228,15 @@ void maxim_heart_rate_and_oxygen_saturation(uint32_t *pun_ir_buffer,  int32_t n_
     for(k=0; k< 5; k++) an_ratio[k]=0;
     for (k=0; k< n_exact_ir_valley_locs_count; k++){
         if (an_exact_ir_valley_locs[k] > BUFFER_SIZE ){             
-            *pn_spo2 =  -999 ; // do not use SPO2 since valley loc is out of range    不使用SPO2，因为山谷loc在范围之外
+            *pn_spo2 =  -999 ; // do not use SPO2 since valley loc is out of range    ��ʹ��SPO2����Ϊɽ��loc�ڷ�Χ֮��
             *pch_spo2_valid  = 0; 
             return;
         }
     }
     // find max between two valley locations   
-    //    求两个山谷之间的最大值
+    //    ������ɽ��֮������ֵ
     // and use ratio betwen AC compoent of Ir & Red and DC compoent of Ir & Red for SPO2 
-    //以及Ir & Red的交流分量与Ir & Red的直流分量对SPO2的利用率
+    //�Լ�Ir & Red�Ľ���������Ir & Red��ֱ��������SPO2��������
     for (k=0; k< n_exact_ir_valley_locs_count-1; k++){
         n_y_dc_max= -16777216 ; 
         n_x_dc_max= - 16777216; 
@@ -249,15 +249,15 @@ void maxim_heart_rate_and_oxygen_saturation(uint32_t *pun_ir_buffer,  int32_t n_
             n_y_ac=  an_y[an_exact_ir_valley_locs[k]] + n_y_ac/ (an_exact_ir_valley_locs[k+1] - an_exact_ir_valley_locs[k])  ; 
         
         
-            n_y_ac=  an_y[n_y_dc_max_idx] - n_y_ac;    // subracting linear DC compoenents from raw    从原始电路中减去线性直流分量
+            n_y_ac=  an_y[n_y_dc_max_idx] - n_y_ac;    // subracting linear DC compoenents from raw    ��ԭʼ��·�м�ȥ����ֱ������
             n_x_ac= (an_x[an_exact_ir_valley_locs[k+1]] - an_x[an_exact_ir_valley_locs[k] ] )*(n_x_dc_max_idx -an_exact_ir_valley_locs[k]); // ir
             n_x_ac=  an_x[an_exact_ir_valley_locs[k]] + n_x_ac/ (an_exact_ir_valley_locs[k+1] - an_exact_ir_valley_locs[k]); 
             n_x_ac=  an_x[n_y_dc_max_idx] - n_x_ac;      // subracting linear DC compoenents from raw 
-            n_nume=( n_y_ac *n_x_dc_max)>>7 ; //prepare X100 to preserve floating value     准备X100以保留浮动值
+            n_nume=( n_y_ac *n_x_dc_max)>>7 ; //prepare X100 to preserve floating value     ׼��X100�Ա�������ֵ
             n_denom= ( n_x_ac *n_y_dc_max)>>7;
             if (n_denom>0  && n_i_ratio_count <5 &&  n_nume != 0)
             {   
-                an_ratio[n_i_ratio_count]= (n_nume*20)/n_denom ; //formular is ( n_y_ac *n_x_dc_max) / ( n_x_ac *n_y_dc_max) ;  ///*************************n_nume原来是*100************************//
+                an_ratio[n_i_ratio_count]= (n_nume*20)/n_denom ; //formular is ( n_y_ac *n_x_dc_max) / ( n_x_ac *n_y_dc_max) ;  ///*************************n_numeԭ����*100************************//
                 n_i_ratio_count++;
             }
         }
@@ -284,7 +284,7 @@ void maxim_heart_rate_and_oxygen_saturation(uint32_t *pun_ir_buffer,  int32_t n_
 
 
 /**
-* \brief        寻找峰值
+* \brief        Ѱ�ҷ�ֵ
 * \par          Details
 *               Find at most MAX_NUM peaks above MIN_HEIGHT separated by at least MIN_DISTANCE
 *
@@ -299,7 +299,7 @@ void maxim_find_peaks(int32_t *pn_locs, int32_t *pn_npks, int32_t *pn_x, int32_t
 
 
 /**
-* \brief        Find peaks above n_min_height   //找到n_min_height以上的峰
+* \brief        Find peaks above n_min_height   //�ҵ�n_min_height���ϵķ�
 * \par          Details
 *               Find all peaks above MIN_HEIGHT
 *
@@ -331,7 +331,7 @@ void maxim_peaks_above_min_height(int32_t *pn_locs, int32_t *pn_npks, int32_t  *
 
 
 /**
-* \brief        Remove peaks     //删除的山峰
+* \brief        Remove peaks     //ɾ����ɽ��
 * \par          Details
 *               Remove peaks separated by less than MIN_DISTANCE
 *
@@ -363,7 +363,7 @@ void maxim_remove_close_peaks(int32_t *pn_locs, int32_t *pn_npks, int32_t *pn_x,
 
 
 /**
-* \brief        Sort array    //冒泡排序
+* \brief        Sort array    //ð������
 * \par          Details
 *               Sort array in ascending order (insertion sort algorithm)
 *
@@ -384,7 +384,7 @@ void maxim_sort_ascend(int32_t *pn_x,int32_t n_size)
 
 
 /**
-* \brief        Sort indices   //分类指数
+* \brief        Sort indices   //����ָ��
 * \par          Details
 *               Sort indices according to descending order (insertion sort algorithm)
 *

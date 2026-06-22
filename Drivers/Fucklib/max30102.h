@@ -4,7 +4,6 @@
 #include "main.h"
 #include "algorithm.h"
 #include <stdio.h>
-
 /* MAX30102 INT pin (active low) */
 #define MAX30102_INT   HAL_GPIO_ReadPin(MAX30102_INT_GPIO_Port, MAX30102_INT_Pin)
 

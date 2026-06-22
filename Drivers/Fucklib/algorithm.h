@@ -66,7 +66,7 @@
 #define true 1
 #define false 0
 #define FS 100
-#define BUFFER_SIZE  (FS* 5) 
+#define BUFFER_SIZE  100  /* 为适配 STM32F103C8T6 的 20KB RAM，将算法缓存从 500 点降到 100 点 */ 
 #define HR_FIFO_SIZE 7
 #define MA4_SIZE  4 // DO NOT CHANGE
 #define HAMMING_SIZE  5// DO NOT CHANGE
