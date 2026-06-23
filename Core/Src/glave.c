@@ -205,16 +205,17 @@ void glave_main(void *keycode) {
                             at_enter_tranfer(0);
                         }
 
-                        health_data_t dat = { 
-                            g_health_data.heart_rate,
-                            g_health_data.spo2,
-                            g_health_data.kcal_x100 / 100,
-                            g_health_data.sport_time_s,
-                            g_health_data.alert_code
-                        };
-
-                        size = sqb_pack(packbuf, SQB_TYPE_DATA, sizeof(dat), (const uint8_t *)&dat);
-                        at_send(0, packbuf, size);
+                        if (g_health_data.valid) {
+                            health_data_t dat = { 
+                                g_health_data.heart_rate,
+                                g_health_data.spo2,
+                                g_health_data.kcal_x100 / 10,
+                                g_health_data.sport_time_s,
+                                g_health_data.alert_code
+                            };
+                            size = sqb_pack(packbuf, SQB_TYPE_DATA, sizeof(dat), (const uint8_t *)&dat);
+                            at_send(0, packbuf, size);
+                        }
 
                         size = sqb_pack(packbuf, SQB_TYPE_SELECT, sizeof(cur_func), &cur_func);
                         at_send(0, packbuf, size);
