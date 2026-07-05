@@ -50,7 +50,7 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
-struct rt_thread thread_pool[2];
+struct rt_thread thread_pool[3];
 rt_thread_t th_input, th_main, th_fuck;
 
 static uint8_t stack0[512];
@@ -86,6 +86,7 @@ void rtos_startup() {
   
   th_input = &thread_pool[0];
   th_main = &thread_pool[1];
+  th_fuck = &thread_pool[2];
   rt_thread_init(th_input, "input", input_monitor, (void *)&channel, stack0, sizeof stack0, 4, 5);
   rt_thread_init(th_main, "glvmain", glave_main, (void *)&channel, stack1, sizeof stack1, 5, 20);
   rt_thread_init(th_fuck, "fuck", app4, NULL, stack2, sizeof stack1, 5, 20);
