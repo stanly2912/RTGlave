@@ -9,6 +9,7 @@
 #include "rtthread.h"
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_hal_def.h"
+#include "stm32f1xx_hal_gpio.h"
 #include "tb05.h"
 #include <stdint.h>
 #include <string.h>
@@ -60,15 +61,31 @@ void glave_main(void *keycode) {
     tb05_force_scan(0, "RTHelmet", remote_mac[0]);
     tb05_force_scan(0, "RTTap", remote_mac[1]);
 
-    while (tb05_connect(0, remote_mac[0]) != AT_OK) {
-        tb05_disconnect(0);
-        rt_thread_delay(1000);
+    int ret = AT_TIMEOUT;
+    while (ret != AT_OK) {
+        ret = tb05_connect(0, remote_mac[0]);
+        if (ret == AT_TIMEOUT) {
+            uint8_t *p;
+            int wait = 5;
+            while (wait--) {
+                p = at_wait_for((const uint8_t *)"+EVENT", 6, AT_TIMEOUT_TIME);
+                if (p != NULL) {
+                    ret = AT_OK;
+                    break;
+                }
+            }
+            if (wait == -1) {
+                tb05_disconnect(0);
+                at_pop(at_readable_len());
+            }
+        }
     }
 
     rt_exit_critical();
     
     rt_thread_startup(th_input);
 
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
     while (1) {
         rt_enter_critical();
         keycopy = *(uint32_t *) keycode;
