@@ -50,7 +50,7 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
-struct rt_thread thread_pool[2];
+struct rt_thread thread_pool[3];
 rt_thread_t th_input, th_main, th_fuck;
 
 static uint8_t stack0[512];
@@ -86,10 +86,12 @@ void rtos_startup() {
   
   th_input = &thread_pool[0];
   th_main = &thread_pool[1];
+  th_fuck = &thread_pool[2];
   rt_thread_init(th_input, "input", input_monitor, (void *)&channel, stack0, sizeof stack0, 4, 5);
-  rt_thread_init(th_main, "glvmain", glave_main, (void *)&channel, stack1, sizeof stack1, 5, 20);
-  rt_thread_init(th_fuck, "fuck", app4, NULL, stack2, sizeof stack1, 5, 20);
+  rt_thread_init(th_main, "glvmain", glave_main, (void *)&channel, stack1, sizeof stack1, 5, 10);
+  rt_thread_init(th_fuck, "fuck", app4, NULL, stack2, sizeof stack1, 5, 10);
   rt_thread_startup(th_main);
+  rt_thread_startup(th_fuck);
 
   /* end */
 
@@ -308,6 +310,9 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, RST_Pin|GPIO_PIN_7, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
+
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -327,6 +332,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB12 */
+  GPIO_InitStruct.Pin = GPIO_PIN_12;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : MAX30102_INT_Pin */
   GPIO_InitStruct.Pin = MAX30102_INT_Pin;
