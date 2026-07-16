@@ -54,6 +54,9 @@ void max30102_FIFO_ReadBytes(uint8_t Register_Address, uint8_t *Data);
 void maxim_max30102_write_reg(uint8_t uch_addr, uint8_t uch_data);
 void maxim_max30102_read_reg(uint8_t uch_addr, uint8_t *puch_data);
 void maxim_max30102_read_fifo(uint32_t *pun_red_led, uint32_t *pun_ir_led);
-void max30102_Read_Data(int32_t *n_heart_rate, int32_t *n_sp02);
+void max30102_Read_Data(int32_t *heart_rate,
+                         int32_t *spo2,
+                         int *hr_valid,
+                         int *spo2_valid);
 
 #endif

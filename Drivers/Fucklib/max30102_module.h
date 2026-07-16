@@ -62,7 +62,11 @@ typedef struct MAX30102_Module MAX30102_Module_t;
  */
 typedef int (*MAX30102_Init_Func)(MAX30102_Module_t *self);
 typedef int (*MAX30102_Measure_Func)(MAX30102_Module_t *self);
-typedef int (*MAX30102_GetValue_Func)(MAX30102_Module_t *self, int *heart_rate, int *spo2, int *valid);
+typedef int (*MAX30102_GetValue_Func)(MAX30102_Module_t *self,
+                                       int *heart_rate,
+                                       int *spo2,
+                                       int *hr_valid,
+                                       int *spo2_valid);
 
 /*
  * MAX30102 模块结构体
@@ -77,7 +81,11 @@ struct MAX30102_Module
     int heart_rate;
     /* 当前血氧值，单位 % */
     int spo2;
-    /* 当前数据是否有效：1 有效，0 无效 */
+    /* 心率是否有效：1 有效，0 无效 */
+    int hr_valid;
+    /* 血氧是否有效：1 有效，0 无效 */
+    int spo2_valid;
+    /* 兼容旧接口：任意一项有效时为 1；上层应优先读取各自 valid */
     int valid;
     /* 当前模块是否已经初始化：1 已初始化，0 未初始化 */
     int is_init;
@@ -103,7 +111,7 @@ struct MAX30102_Module
  * 调用后可以这样用：
  *   module.Init(&module);
  *   module.Measure(&module);
- *   module.GetValue(&module, &hr, &spo2, &valid);
+ *   module.GetValue(&module, &hr, &spo2, &hr_valid, &spo2_valid);
  */
 void MAX30102_Module_Create(MAX30102_Module_t *self);
 

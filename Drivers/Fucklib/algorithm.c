@@ -154,7 +154,13 @@ void maxim_heart_rate_and_oxygen_saturation(uint32_t *pun_ir_buffer,  int32_t n_
     n_th1= n_th1/ ( BUFFER_SIZE-HAMMING_SIZE);
     // peak location is acutally index for sharpest location of raw signal since we flipped the signal    
     //��ֵλ��ʵ���������Ƿ�ת�źź�ԭʼ�ź������λ�õ�����    
-    maxim_find_peaks( an_dx_peak_locs, &n_npks, an_dx, BUFFER_SIZE-HAMMING_SIZE, n_th1, 8, 5 );//peak_height, peak_distance, max_num_peaks 
+    /*
+     * 25Hz 算法采样率下，使用按时间重新换算后的最小峰间距。
+     * 可减少骑行抖动产生的密集假峰被当作心搏。
+     */
+    maxim_find_peaks(an_dx_peak_locs, &n_npks, an_dx,
+                     BUFFER_SIZE-HAMMING_SIZE, n_th1,
+                     HR_PEAK_MIN_DISTANCE, 5);//peak_height, peak_distance, max_num_peaks 
 
     n_peak_interval_sum =0;
     if (n_npks>=2){
@@ -165,7 +171,8 @@ void maxim_heart_rate_and_oxygen_saturation(uint32_t *pun_ir_buffer,  int32_t n_
        }
            
         n_peak_interval_sum=n_peak_interval_sum/(n_npks-1);
-        *pn_heart_rate=(int32_t)(6000/n_peak_interval_sum);// beats per minutes   ÿ����������
+        /* 心率公式随算法实际采样率变化，不能继续写死 6000。 */
+        *pn_heart_rate = (int32_t)((60 * FS) / n_peak_interval_sum);// beats per minutes   ÿ����������
         *pch_hr_valid  = 1;
        
 //       printf ("pn_heart_rate=%d\r\n",*pn_heart_rate);//���Ե�
@@ -192,8 +199,11 @@ void maxim_heart_rate_and_oxygen_saturation(uint32_t *pun_ir_buffer,  int32_t n_
         un_only_once =1;
         m=an_ir_valley_locs[k];
         n_c_min= 16777216;//2^24;
-        if (m+5 <  BUFFER_SIZE-HAMMING_SIZE  && m-5 >0){
-            for(i= m-5;i<m+5; i++)
+        if (m + SPO2_VALLEY_SEARCH_RADIUS < BUFFER_SIZE-HAMMING_SIZE &&
+            m - SPO2_VALLEY_SEARCH_RADIUS > 0){
+            for(i = m - SPO2_VALLEY_SEARCH_RADIUS;
+                i < m + SPO2_VALLEY_SEARCH_RADIUS;
+                i++)
                 if (an_x[i]<n_c_min){
                     if (un_only_once >0){
                        un_only_once =0;
@@ -240,7 +250,8 @@ void maxim_heart_rate_and_oxygen_saturation(uint32_t *pun_ir_buffer,  int32_t n_
     for (k=0; k< n_exact_ir_valley_locs_count-1; k++){
         n_y_dc_max= -16777216 ; 
         n_x_dc_max= - 16777216; 
-        if (an_exact_ir_valley_locs[k+1]-an_exact_ir_valley_locs[k] >10){
+        if (an_exact_ir_valley_locs[k+1] - an_exact_ir_valley_locs[k] >
+            SPO2_MIN_VALLEY_DISTANCE){
             for (i=an_exact_ir_valley_locs[k]; i< an_exact_ir_valley_locs[k+1]; i++){
                 if (an_x[i]> n_x_dc_max) {n_x_dc_max =an_x[i];n_x_dc_max_idx =i; }
                 if (an_y[i]> n_y_dc_max) {n_y_dc_max =an_y[i];n_y_dc_max_idx=i;}

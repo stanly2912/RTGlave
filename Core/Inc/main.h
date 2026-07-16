@@ -37,37 +37,33 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 /*
- * 实时健康数据全局变量结构体。
+ * 手部节点实时健康数据。
+ * 仍然只使用一个全局变量 g_health_data，但心率和血氧各自拥有独立的
+ * 有效标志与预警码，便于触点选择“心率/血氧/卡路里”时分别判断。
  *
- * 只保留一个全局变量 g_health_data。
- * MAX30102 模块测到的数据、卡路里、运动时间、预警标志都会写到这里。
- * 后续蓝牙/App/语音模块需要数据时，直接读取 g_health_data 即可。
+ * 心率预警码 hr_alert_code：
+ * 0：心率正常，不播异常
+ * 1：心率过低
+ * 2：心率过高
  *
- * alert_code 是“哪里出问题”的预警播报码，不再做很多等级。
- * 语音模块不用再做按位与判断，直接根据这个数值选择播报内容即可：
- * 0：无异常，不播异常提醒
- * 1：心率过低，建议播“注意，心率过低，请检查身体状态”
- * 2：心率过高，建议播“注意，心率过高，请降低骑行强度”
- * 4：血氧偏低，建议播“注意，血氧偏低，请降低骑行强度并休息”
- * 5：心率过低 + 血氧偏低，建议播“注意，心率过低且血氧偏低，请检查身体状态并休息”
- * 6：心率过高 + 血氧偏低，建议播“注意，心率过高且血氧偏低，请停止骑行并休息”
+ * 血氧预警码 spo2_alert_code：
+ * 0：血氧正常，不播异常
+ * 3：血氧过低
  *
- * normal_report_flag 用于正常骑行时的周期播报：
- * 0：没有到正常播报时间
- * 1：已到正常播报时间，语音模块可以播报一次正常数据，播完后由语音模块清 0
- * 正常播这个：已骑行 X 分钟，消耗约 Y 千卡，当前心率 Z，血氧 W
- * normal_report_count 表示已经触发过几次正常播报，方便调试。
+ * 因为心率和血氧是分别选择、分别播报，所以不再生成组合预警码。
  */
+
 typedef struct
 {
-  volatile int heart_rate;                /* 当前心率，单位 bpm */
-  volatile int spo2;                      /* 当前血氧，单位 % */
-  volatile int valid;                     /* MAX30102 数据有效标志，1 表示有效 */
-  volatile uint32_t kcal_x100;            /* 累计卡路里*100，例如 18.36 kcal 存 1836 */
-  volatile uint32_t sport_time_s;         /* 有效运动时间，单位秒 */
-  volatile uint8_t alert_code;           /* 预警播报码，表示心率/血氧哪里异常 */
-  volatile uint8_t normal_report_flag;    /* 正常数据播报标志，1 表示到 3 分钟播报点 */
-  volatile uint32_t normal_report_count;  /* 正常数据播报触发次数 */
+  volatile int heart_rate;             /* 当前心率，单位 bpm */
+  volatile int spo2;                   /* 当前血氧，单位 % */
+  volatile int hr_valid;               /* 心率有效标志：1有效，0无效 */
+  volatile int spo2_valid;             /* 血氧有效标志：1有效，0无效 */
+  volatile int valid;                  /* 兼容标志：任意一项有效时为1 */
+  volatile uint32_t kcal_x100;         /* 累计卡路里*100 */
+  volatile uint32_t sport_time_s;      /* 有效心率对应的运动时间，单位秒 */
+  volatile uint8_t hr_alert_code;      /* 0正常，1心率过低，2心率过高 */
+  volatile uint8_t spo2_alert_code;    /* 0正常，3血氧过低 */
 } Health_Data_t;
 
 typedef struct {

@@ -65,8 +65,21 @@
 
 #define true 1
 #define false 0
-#define FS 100
-#define BUFFER_SIZE  100  /* 为适配 STM32F103C8T6 的 20KB RAM，将算法缓存从 500 点降到 100 点 */ 
+/*
+ * MAX30102 硬件仍按 100Hz 采样。
+ * 为了在 F103 的 20KB RAM 内保留约 5 秒分析窗口，
+ * 每 4 个原始样本取平均，算法等效采样率为 25Hz。
+ */
+#define MAX30102_SENSOR_FS          100
+#define MAX30102_DOWNSAMPLE_FACTOR  4
+#define FS                          (MAX30102_SENSOR_FS / MAX30102_DOWNSAMPLE_FACTOR)
+#define BUFFER_SECONDS              5
+#define BUFFER_SIZE                 (FS * BUFFER_SECONDS)  /* 25Hz * 5s = 125 点 */
+
+/* 25Hz 算法下的峰值/谷值参数。 */
+#define HR_PEAK_MIN_DISTANCE        6   /* 相邻心搏峰至少间隔 6 点，约 0.24s */
+#define SPO2_VALLEY_SEARCH_RADIUS   2   /* 谷值附近前后搜索 2 点 */
+#define SPO2_MIN_VALLEY_DISTANCE    3   /* 相邻谷值至少间隔 3 点 */
 #define HR_FIFO_SIZE 7
 #define MA4_SIZE  4 // DO NOT CHANGE
 #define HAMMING_SIZE  5// DO NOT CHANGE

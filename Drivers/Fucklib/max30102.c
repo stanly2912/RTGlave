@@ -6,9 +6,14 @@
 
 extern I2C_HandleTypeDef hi2c1;
 
-uint32_t aun_ir_buffer[BUFFER_SIZE];   /* IR 数据缓存：100 点，节省 RAM */
+/*
+ * 算法缓存：125 点。
+ * MAX30102 硬件按 100Hz 采样，每 4 点平均为 1 点，
+ * 因此 125 点仍代表约 5 秒数据，同时 RAM 占用较小。
+ */
+uint32_t aun_ir_buffer[BUFFER_SIZE];
 int32_t n_ir_buffer_length;
-uint32_t aun_red_buffer[BUFFER_SIZE];  /* RED 数据缓存：100 点，节省 RAM */
+uint32_t aun_red_buffer[BUFFER_SIZE];
 int32_t n_sp02;
 int8_t ch_spo2_valid;
 int32_t n_heart_rate;
@@ -28,6 +33,41 @@ static void max30102_read_one_sample(uint32_t *red, uint32_t *ir)
     *ir  = ((uint32_t)(temp[3] & 0x03U) << 16) |
            ((uint32_t)temp[4] << 8) |
            ((uint32_t)temp[5]);
+}
+
+/*
+ * 采集一整个算法窗口。
+ * 传感器原始采样率为 100Hz，每 4 个原始样本取平均，
+ * 得到 25Hz 的算法输入；125 点对应约 5 秒。
+ */
+static void max30102_collect_algorithm_window(void)
+{
+    int i;
+    int j;
+
+    n_ir_buffer_length = BUFFER_SIZE;
+
+    for (i = 0; i < n_ir_buffer_length; i++)
+    {
+        uint32_t red_sum = 0U;
+        uint32_t ir_sum = 0U;
+
+        for (j = 0; j < MAX30102_DOWNSAMPLE_FACTOR; j++)
+        {
+            uint32_t red_raw = 0U;
+            uint32_t ir_raw = 0U;
+
+            /* 使用毫秒延时，避免 rt_thread_delay 的 tick 单位造成采样率错误。 */
+            rt_thread_mdelay(1000U / MAX30102_SENSOR_FS);
+            max30102_read_one_sample(&red_raw, &ir_raw);
+
+            red_sum += red_raw;
+            ir_sum += ir_raw;
+        }
+
+        aun_red_buffer[i] = red_sum / MAX30102_DOWNSAMPLE_FACTOR;
+        aun_ir_buffer[i] = ir_sum / MAX30102_DOWNSAMPLE_FACTOR;
+    }
 }
 
 uint8_t max30102_Bus_Write(uint8_t Register_Address, uint8_t Word_Data)
@@ -120,12 +160,10 @@ void max30102_FIFO_ReadBytes(uint8_t Register_Address, uint8_t *Data)
 
 void max30102_init(void)
 {
-    int i;
-
-    rt_thread_delay(10);
+    rt_thread_mdelay(10);
 
     max30102_reset();
-    rt_thread_delay(20);
+    rt_thread_mdelay(20);
 
     max30102_Bus_Write(REG_INTR_ENABLE_1, 0xC0);
     max30102_Bus_Write(REG_INTR_ENABLE_2, 0x00);
@@ -139,15 +177,9 @@ void max30102_init(void)
     max30102_Bus_Write(REG_LED2_PA,      0x08);
     max30102_Bus_Write(REG_PILOT_PA,     0x08);
 
-    rt_thread_delay(100);
+    rt_thread_mdelay(100);
 
-    n_ir_buffer_length = BUFFER_SIZE;
-
-    for (i = 0; i < n_ir_buffer_length; i++)
-    {
-        rt_thread_delay(10);
-        max30102_read_one_sample(&aun_red_buffer[i], &aun_ir_buffer[i]);
-    }
+    max30102_collect_algorithm_window();
 
     maxim_heart_rate_and_oxygen_saturation(
         aun_ir_buffer,
@@ -162,7 +194,7 @@ void max30102_init(void)
 void max30102_reset(void)
 {
     max30102_Bus_Write(REG_MODE_CONFIG, 0x40);
-    rt_thread_delay(20);
+    rt_thread_mdelay(20);
 }
 
 void maxim_max30102_write_reg(uint8_t uch_addr, uint8_t uch_data)
@@ -207,25 +239,23 @@ void maxim_max30102_read_fifo(uint32_t *pun_red_led, uint32_t *pun_ir_led)
     *pun_ir_led  &= 0x03FFFFU;
 }
 
-void max30102_Read_Data(int32_t *heart_rate, int32_t *sp02)
+void max30102_Read_Data(int32_t *heart_rate,
+                         int32_t *spo2,
+                         int *hr_valid,
+                         int *spo2_valid)
 {
-    int i;
-
-    /*
-     * RAM 优化说明：
-     * 原始例程使用 500 点 RED/IR 缓存，并且 algorithm.c 中还有多个 500 点数组，
-     * 在 STM32F103C8T6（20KB RAM）上很容易爆 RAM。
-     *
-     * 这里统一使用 algorithm.h 中的 BUFFER_SIZE，目前为 100 点。
-     * 每次读取 100 个样本后计算一次心率和血氧，RAM 占用会明显降低。
-     */
-    n_ir_buffer_length = BUFFER_SIZE;
-
-    for (i = 0; i < n_ir_buffer_length; i++)
+    if ((heart_rate == NULL) || (spo2 == NULL) ||
+        (hr_valid == NULL) || (spo2_valid == NULL))
     {
-        rt_thread_delay(10);
-        max30102_read_one_sample(&aun_red_buffer[i], &aun_ir_buffer[i]);
+        return;
     }
+
+    *heart_rate = 0;
+    *spo2 = 0;
+    *hr_valid = 0;
+    *spo2_valid = 0;
+
+    max30102_collect_algorithm_window();
 
     maxim_heart_rate_and_oxygen_saturation(
         aun_ir_buffer,
@@ -236,30 +266,26 @@ void max30102_Read_Data(int32_t *heart_rate, int32_t *sp02)
         &n_heart_rate,
         &ch_hr_valid);
 
-    /*
-     * 这里只做底层数据合理性判断：
-     * 心率：40~220 bpm
-     * 血氧：70~100 %
-     * 更具体的预警逻辑放在 main.c 的 g_health_data.alert_code 中处理。
-     */
-    if ((ch_hr_valid == 1) && (ch_spo2_valid == 1) &&
-        (n_heart_rate >= 40) && (n_heart_rate <= 220) &&
-        (n_sp02 >= 70) && (n_sp02 <= 100))
+    /* 心率和血氧分别判断有效性，互不连带清零。 */
+    if ((ch_hr_valid == 1) &&
+        (n_heart_rate >= 40) && (n_heart_rate <= 220))
     {
         *heart_rate = n_heart_rate;
-        *sp02 = n_sp02;
+        *hr_valid = 1;
     }
-    else
+
+    if (ch_spo2_valid == 1)
     {
-        *heart_rate = 0;
-        *sp02 = 0;
+        /* 有效算法结果若偶尔超过 100%，显示值按 100% 处理，不做过高预警。 */
+        if (n_sp02 > 100)
+        {
+            n_sp02 = 100;
+        }
+
+        if (n_sp02 >= 70)
+        {
+            *spo2 = n_sp02;
+            *spo2_valid = 1;
+        }
     }
 }
-
-
-
-
-
-
-
-

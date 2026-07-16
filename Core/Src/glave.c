@@ -222,27 +222,66 @@ void glave_main(void *keycode) {
                             at_enter_tranfer(0);
                         }
                         
-                        const int hr[4] = {88, 89, 91, 87};
-                        const int so[4] = {93, 94, 92, 95};
-                        static int hrp = 0, sop = 0;
-                        static uint32_t sport_start;
-                        if (sport_start == 0) {
-                            sport_start = HAL_GetTick();
+                        // const int hr[4] = {88, 89, 91, 87};
+                        // const int so[4] = {93, 94, 92, 95};
+                        // static int hrp = 0, sop = 0;
+                        // static uint32_t sport_start;
+                        // if (sport_start == 0) {
+                        //     sport_start = HAL_GetTick();
+                        // }
+
+                        // health_data_t dat = { 
+                        //     hr[hrp],
+                        //     so[sop],
+                        //     g_health_data.kcal_x100 / 10,
+                        //     HAL_GetTick() - sport_start,
+                        //     g_health_data.alert_code
+                        // };
+
+                        // hrp = (hrp + 1) % 4;
+                        // sop = (hrp + 3) % 4;
+                                                /*
+                         * 心率、血氧、卡路里按触点功能分别判断有效性：
+                         * case 1 心率 -> hr_valid，并发送心率预警码 0/1/2
+                         * case 2 血氧 -> spo2_valid，并发送血氧预警码 0/3
+                         * case 4 卡路里 -> hr_valid，预警码固定为 0
+                         */
+                        {
+                            uint8_t selected_valid = 0U;
+                            uint32_t selected_alert_code = 0U;
+
+                            if (cur_func == 1U)
+                            {
+                                selected_valid = (uint8_t)g_health_data.hr_valid;
+                                selected_alert_code = g_health_data.hr_alert_code;
+                            }
+                            else if (cur_func == 2U)
+                            {
+                                selected_valid = (uint8_t)g_health_data.spo2_valid;
+                                selected_alert_code = g_health_data.spo2_alert_code;
+                            }
+                            else if (cur_func == 4U)
+                            {
+                                selected_valid = (uint8_t)g_health_data.hr_valid;
+                                selected_alert_code = 0U;
+                            }
+
+                            if (selected_valid != 0U)
+                            {
+                                health_data_t dat = {
+                                    g_health_data.heart_rate,
+                                    g_health_data.spo2,
+                                    (g_health_data.kcal_x100 + 50U) / 100U,
+                                    g_health_data.sport_time_s,
+                                    selected_alert_code
+                                };
+                                size = sqb_pack(packbuf, SQB_TYPE_DATA, sizeof(dat), (const uint8_t *)&dat);
+                                at_send(0, packbuf, size);
+                            }
                         }
-
-                        health_data_t dat = { 
-                            hr[hrp],
-                            so[sop],
-                            g_health_data.kcal_x100 / 10,
-                            HAL_GetTick() - sport_start,
-                            g_health_data.alert_code
-                        };
-
-                        hrp = (hrp + 1) % 4;
-                        sop = (hrp + 3) % 4;
                         
-                        size = sqb_pack(packbuf, SQB_TYPE_DATA, sizeof(dat), (const uint8_t *)&dat);
-                        at_send(0, packbuf, size);
+                        // size = sqb_pack(packbuf, SQB_TYPE_DATA, sizeof(dat), (const uint8_t *)&dat);
+                        // at_send(0, packbuf, size);
                         
 
                         size = sqb_pack(packbuf, SQB_TYPE_SELECT, sizeof(cur_func), &cur_func);
