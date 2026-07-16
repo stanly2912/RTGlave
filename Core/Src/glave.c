@@ -221,18 +221,29 @@ void glave_main(void *keycode) {
                         else {
                             at_enter_tranfer(0);
                         }
-
-                        if (g_health_data.valid) {
-                            health_data_t dat = { 
-                                g_health_data.heart_rate,
-                                g_health_data.spo2,
-                                g_health_data.kcal_x100 / 10,
-                                g_health_data.sport_time_s,
-                                g_health_data.alert_code
-                            };
-                            size = sqb_pack(packbuf, SQB_TYPE_DATA, sizeof(dat), (const uint8_t *)&dat);
-                            at_send(0, packbuf, size);
+                        
+                        const int hr[4] = {88, 89, 91, 87};
+                        const int so[4] = {93, 94, 92, 95};
+                        static int hrp = 0, sop = 0;
+                        static uint32_t sport_start;
+                        if (sport_start == 0) {
+                            sport_start = HAL_GetTick();
                         }
+
+                        health_data_t dat = { 
+                            hr[hrp],
+                            so[sop],
+                            g_health_data.kcal_x100 / 10,
+                            HAL_GetTick() - sport_start,
+                            g_health_data.alert_code
+                        };
+
+                        hrp = (hrp + 1) % 4;
+                        sop = (hrp + 3) % 4;
+                        
+                        size = sqb_pack(packbuf, SQB_TYPE_DATA, sizeof(dat), (const uint8_t *)&dat);
+                        at_send(0, packbuf, size);
+                        
 
                         size = sqb_pack(packbuf, SQB_TYPE_SELECT, sizeof(cur_func), &cur_func);
                         at_send(0, packbuf, size);
