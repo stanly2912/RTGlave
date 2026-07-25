@@ -87,7 +87,7 @@ void glave_main(void *keycode) {
 
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
     while (1) {
-        rt_enter_critical();
+        // rt_enter_critical();
         keycopy = *(uint32_t *) keycode;
         
 
@@ -268,11 +268,22 @@ void glave_main(void *keycode) {
 
                             if (selected_valid != 0U)
                             {
+                                static int32_t spo2 = 97;
+                                static uint32_t start_time;
+
+                                if (start_time == 0) {
+                                    start_time = HAL_GetTick();
+                                }
+
+                                if (g_health_data.spo2 != 0) {
+                                    spo2 = g_health_data.spo2;
+                                }
+
                                 health_data_t dat = {
                                     g_health_data.heart_rate,
-                                    g_health_data.spo2,
-                                    (g_health_data.kcal_x100 + 50U) / 100U,
-                                    g_health_data.sport_time_s,
+                                    spo2,
+                                    (g_health_data.kcal_x100 + 50U) / 1000U,
+                                    (HAL_GetTick() - start_time) / 1000,
                                     selected_alert_code
                                 };
                                 size = sqb_pack(packbuf, SQB_TYPE_DATA, sizeof(dat), (const uint8_t *)&dat);
@@ -331,6 +342,6 @@ void glave_main(void *keycode) {
         }
 
         *(uint32_t*) keycode = key_none;
-        rt_exit_critical();
+        // rt_exit_critical();
     }
 }

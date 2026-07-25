@@ -88,8 +88,8 @@ void rtos_startup() {
   th_main = &thread_pool[1];
   th_fuck = &thread_pool[2];
   rt_thread_init(th_input, "input", input_monitor, (void *)&channel, stack0, sizeof stack0, 4, 5);
-  rt_thread_init(th_main, "glvmain", glave_main, (void *)&channel, stack1, sizeof stack1, 5, 10);
-  rt_thread_init(th_fuck, "fuck", app4, NULL, stack2, sizeof stack1, 5, 10);
+  rt_thread_init(th_main, "glvmain", glave_main, (void *)&channel, stack1, sizeof stack1, 5, 5);
+  rt_thread_init(th_fuck, "fuck", app4, NULL, stack2, sizeof stack1, 5, 5);
   rt_thread_startup(th_main);
   rt_thread_startup(th_fuck);
 
