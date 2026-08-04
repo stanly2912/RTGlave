@@ -4,6 +4,7 @@
 #include "protocol.h"
 
 
+#include "rtdef.h"
 #include "rthw.h"
 #include "main.h"
 #include "rtthread.h"
@@ -19,22 +20,34 @@
 extern UART_HandleTypeDef huart2;
 extern Health_Data_t g_health_data;
 
+static struct rt_mutex key_lock;
+static uint32_t blink_time = 500;
+
+static void switch_event(uint8_t cur_func);
+
 void input_monitor(void *keycode) {
     int32_t *keycode32 = (int32_t *) keycode;
     volatile uint8_t input_state, prev_state = 0;
+    rt_mutex_init(&key_lock, "key_lock", RT_IPC_FLAG_FIFO);
     while (1) {
         input_state = (!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5) << 1)
                     | !HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6);
-        if (input_state == prev_state) {
-            switch (input_state) {
-                case 0: *keycode32 = key_none; break;
-                case 1: *keycode32 = key_switch; break;
-                case 2: *keycode32 = key_select; break;
-                default: *keycode32 = key_undef; break;
-            }
 
-            if (*keycode32 != key_undef && *keycode32 != key_none) {
-                rt_thread_delay(200);
+        
+        if (input_state == prev_state) {
+            if (rt_mutex_trytake(&key_lock)) {
+
+                switch (input_state) {
+                    case 0: *keycode32 = key_none; break;
+                    case 1: *keycode32 = key_switch; break;
+                    case 2: *keycode32 = key_select; break;
+                    default: *keycode32 = key_undef; break;
+                }
+
+                if (*keycode32 != key_undef && *keycode32 != key_none) {
+                    rt_thread_delay(200);
+                }
+                rt_mutex_release(&key_lock);
             }
         }
         else {
@@ -42,6 +55,11 @@ void input_monitor(void *keycode) {
         }
         rt_thread_delay(20);
     }
+}
+
+void led_blink (void *param) {
+    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_12);
+    rt_thread_delay(blink_time);
 }
 
 static uint8_t packbuf[1024];
@@ -56,62 +74,34 @@ void glave_main(void *keycode) {
     // Initialization
     rt_enter_critical();
     tb05_init(0, "RTGlave", BLE_MASTER);
-    
     while (at_wait_ok() != AT_TIMEOUT) {}
+
     tb05_force_scan(0, "RTHelmet", remote_mac[0]);
     tb05_force_scan(0, "RTTap", remote_mac[1]);
-
-    int ret = AT_TIMEOUT;
-    while (ret != AT_OK) {
-        ret = tb05_connect(0, remote_mac[0]);
-        if (ret == AT_TIMEOUT) {
-            uint8_t *p;
-            int wait = 5;
-            while (wait--) {
-                p = at_wait_for((const uint8_t *)"+EVENT", 6, AT_TIMEOUT_TIME);
-                if (p != NULL) {
-                    ret = AT_OK;
-                    break;
-                }
-            }
-            if (wait == -1) {
-                tb05_disconnect(0);
-                at_pop(at_readable_len());
-            }
-        }
-    }
-
     rt_exit_critical();
     
     rt_thread_startup(th_input);
 
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
     while (1) {
-        // rt_enter_critical();
-        keycopy = *(uint32_t *) keycode;
-        
+        // Connection state check
+        int blestate;
+        at_exit_tranfer(0);
+        ret = at_blestate(0, &blestate);
+        if (ret != AT_OK) break;
+        if (blestate == 0) {
+            tb05_force_connect(0, remote_mac[0]);
+        }
+        else {
+            at_enter_tranfer(0);
+        }
+
+        // input parse
+        keycopy = *(uint32_t*)keycode;
 
         switch (keycopy) {
             case key_none: break;
-            case key_switch: {
-                    cur_func += 1;
-                    if (cur_func > 4) {
-                        cur_func = 0;
-                    }
-
-                    int size = sqb_pack(packbuf, SQB_TYPE_SWITCH, sizeof(cur_func), &cur_func);
-                    int ret, blestate;
-                    at_exit_tranfer(0);
-                    ret = at_blestate(0, &blestate);
-                    if (ret != AT_OK) break;
-                    if (blestate == 0) {
-                        tb05_connect(0, remote_mac[0]);
-                    }
-                    else {
-                        at_enter_tranfer(0);
-                    }
-                    at_send(0, packbuf, size);
-                }
+            case key_switch:
+                cur_func += switch_event(cur_func);
                 break;
             case key_select:
                 switch (cur_func) {
@@ -344,4 +334,13 @@ void glave_main(void *keycode) {
         *(uint32_t*) keycode = key_none;
         // rt_exit_critical();
     }
+}
+
+
+static int switch_event(uint8_t cur_func) {
+    int size;
+    size = sqb_pack(packbuf, SQB_TYPE_SWITCH, sizeof(cur_func), &cur_func);
+    at_send(0, packbuf, size);
+    // wait for response, return 1 if receive, 0 if no increase
+    return 1;
 }
