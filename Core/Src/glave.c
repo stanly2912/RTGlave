@@ -182,8 +182,6 @@ void glave_main(void *keycode) {
                                             
                                             uint32_t t = *(uint32_t*) sqb_body(packbuf);
                                             size = sqb_pack(packbuf, SQB_TYPE_DATA, 4, (uint8_t *)&t);
-
-                                            // TODO: 最后冲刺！！！
                                             HAL_Delay(1000);
                                             at_send(0, packbuf, size);
                                         }
@@ -201,36 +199,7 @@ void glave_main(void *keycode) {
                     case 2: // 血氧
                     case 4: // 卡路里
                     {
-                        int ret, blestate, size;
-                        at_exit_tranfer(0);
-                        ret = at_blestate(0, &blestate);
-                        if (ret != AT_OK) break;
-                        if (blestate == 0) {
-                            tb05_connect(0, remote_mac[0]);
-                        }
-                        else {
-                            at_enter_tranfer(0);
-                        }
-                        
-                        // const int hr[4] = {88, 89, 91, 87};
-                        // const int so[4] = {93, 94, 92, 95};
-                        // static int hrp = 0, sop = 0;
-                        // static uint32_t sport_start;
-                        // if (sport_start == 0) {
-                        //     sport_start = HAL_GetTick();
-                        // }
-
-                        // health_data_t dat = { 
-                        //     hr[hrp],
-                        //     so[sop],
-                        //     g_health_data.kcal_x100 / 10,
-                        //     HAL_GetTick() - sport_start,
-                        //     g_health_data.alert_code
-                        // };
-
-                        // hrp = (hrp + 1) % 4;
-                        // sop = (hrp + 3) % 4;
-                                                /*
+                        /*
                          * 心率、血氧、卡路里按触点功能分别判断有效性：
                          * case 1 心率 -> hr_valid，并发送心率预警码 0/1/2
                          * case 2 血氧 -> spo2_valid，并发送血氧预警码 0/3
@@ -341,6 +310,28 @@ static int switch_event(uint8_t cur_func) {
     int size;
     size = sqb_pack(packbuf, SQB_TYPE_SWITCH, sizeof(cur_func), &cur_func);
     at_send(0, packbuf, size);
+
     // wait for response, return 1 if receive, 0 if no increase
-    return 1;
+    const uint8_t header = SQB_HEAD;
+    uint8_t *rcv = at_wait_for(&header, 1, AT_TIMEOUT_TIME);
+    if (rcv != NULL) {
+        uint32_t begin = rt_tick_get();
+        while (at_readable_len() < 4) {
+            if (rt_tick_get() - begin > AT_TIMEOUT_TIME) {
+                break;
+            }
+        }
+
+        if (at_readable_len() >= 4) {
+            memcpy(packbuf, rcv, 4);
+            at_pop(4);
+            if (sqb_type(packbuf) == SQB_TYPE_RESP) {
+                at_pop(at_readable_len());
+                return 1;
+            }
+        }
+    }
+    
+    at_pop(at_readable_len());
+    return 0;
 }
