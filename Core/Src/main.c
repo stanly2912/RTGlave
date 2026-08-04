@@ -56,6 +56,7 @@ rt_thread_t th_input, th_main, th_fuck;
 static uint8_t stack0[512];
 static uint8_t stack1[4096];
 static uint8_t stack2[4096];
+static uint8_t stack3[64];
 
 volatile uint32_t channel;
 
@@ -70,6 +71,7 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 static void rtos_startup();
 extern void app4(void*);
+extern void led_blink (void *param);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -87,9 +89,11 @@ void rtos_startup() {
   th_input = &thread_pool[0];
   th_main = &thread_pool[1];
   th_fuck = &thread_pool[2];
+  struct rt_thread blink;
   rt_thread_init(th_input, "input", input_monitor, (void *)&channel, stack0, sizeof stack0, 4, 5);
   rt_thread_init(th_main, "glvmain", glave_main, (void *)&channel, stack1, sizeof stack1, 5, 5);
   rt_thread_init(th_fuck, "fuck", app4, NULL, stack2, sizeof stack1, 5, 5);
+  rt_thread_init(&blink, "blink", led_blink, NULL, stack3, sizeof(stack3), 4, 1);
   rt_thread_startup(th_main);
   rt_thread_startup(th_fuck);
 
