@@ -56,7 +56,7 @@ rt_thread_t th_input, th_main, th_fuck;
 static uint8_t stack0[512];
 static uint8_t stack1[4096];
 static uint8_t stack2[4096];
-static uint8_t stack3[64];
+static uint8_t stack3[256];
 
 volatile uint32_t channel;
 
@@ -93,9 +93,10 @@ void rtos_startup() {
   rt_thread_init(th_input, "input", input_monitor, (void *)&channel, stack0, sizeof stack0, 4, 5);
   rt_thread_init(th_main, "glvmain", glave_main, (void *)&channel, stack1, sizeof stack1, 5, 5);
   rt_thread_init(th_fuck, "fuck", app4, NULL, stack2, sizeof stack1, 5, 5);
-  rt_thread_init(&blink, "blink", led_blink, NULL, stack3, sizeof(stack3), 4, 1);
+  rt_thread_init(&blink, "blink", led_blink, NULL, stack3, sizeof(stack3), 5, 5);
   rt_thread_startup(th_main);
   rt_thread_startup(th_fuck);
+  rt_thread_startup(&blink);
 
   /* end */
 

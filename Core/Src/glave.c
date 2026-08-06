@@ -19,7 +19,7 @@
 
 #define BLINK_DISC 500
 #define BLINK_IDLE 250
-#define BLINK_BUSY 100
+#define BLINK_BUSY 70
 
 extern UART_HandleTypeDef huart2;
 extern Health_Data_t g_health_data;
@@ -58,13 +58,15 @@ void input_monitor(void *keycode) {
         else {
             prev_state = input_state;
         }
-        rt_thread_delay(20);
+        rt_thread_delay(40);
     }
 }
 
 void led_blink (void *param) {
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_12);
-    rt_thread_delay(blink_time);
+    while (1) {
+        HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_12);
+        rt_thread_delay(blink_time);
+    }
 }
 
 static uint8_t packbuf[1024];
@@ -83,21 +85,34 @@ void glave_main(void *keycode) {
 
     tb05_force_scan(0, "RTHelmet", remote_mac[0]);
     tb05_force_scan(0, "RTTap", remote_mac[1]);
-    rt_exit_critical();
     
     rt_thread_startup(th_input);
 
+    rt_exit_critical();
+    
+    rt_tick_t check_connection = 0;
+
     while (1) {
         // Connection state check
-        int blestate, ret;
-        at_exit_tranfer(0);
-        ret = at_blestate(0, &blestate);
-        if (ret != AT_OK) break;
-        if (blestate == 0) {
-            tb05_force_connect(0, remote_mac[0]);
-        }
-        else {
-            at_enter_tranfer(0);
+        if (rt_tick_get() - check_connection > 1000) {
+            int blestate, ret;
+            ret = at_blestate(0, &blestate);
+            if (ret != AT_OK)
+            {
+                check_connection = rt_tick_get();
+                blink_time = BLINK_DISC;
+                continue;
+            }
+            if (blestate == 0) {
+                tb05_force_connect(0, remote_mac[0]);
+                at_exit_tranfer(0);
+                check_connection = rt_tick_get();
+                blink_time = BLINK_IDLE;
+            }
+            else {
+                check_connection = rt_tick_get();
+                blink_time = BLINK_IDLE;
+            }
         }
 
         // input parse
@@ -106,10 +121,19 @@ void glave_main(void *keycode) {
         switch (keycopy) {
             case key_none: break;
             case key_switch:
+                blink_time = BLINK_BUSY;
+                at_enter_tranfer(0);
                 cur_func += switch_event(cur_func);
+                cur_func %= 5;
+                at_exit_tranfer(0);
+                blink_time = BLINK_IDLE;
                 break;
             case key_select:
+                blink_time = BLINK_BUSY;
+                at_enter_tranfer(0);
                 select_event(cur_func);
+                at_exit_tranfer(0);
+                blink_time = BLINK_IDLE;
                 break;
             default: break;
         }
@@ -122,6 +146,7 @@ void glave_main(void *keycode) {
 
 static int switch_event(uint8_t cur_func) {
     int size;
+    cur_func = (cur_func + 1) % 5;
     size = sqb_pack(packbuf, SQB_TYPE_SWITCH, sizeof(cur_func), &cur_func);
     at_send(0, packbuf, size);
 
